@@ -1,133 +1,132 @@
 <script lang="ts">
-  import { useLiveQuery } from '$lib/db/live';
+  import { useLiveQuery } from '$lib/db/live.svelte';
   import { db } from '$lib/db';
-  import { toggleHighlight } from '$lib/features/highlights/operations';
-  import ActDetailSheet from '$lib/features/highlights/ActDetailSheet.svelte';
-  import type { Act, UserHighlight } from '$lib/types';
+  import { setActiveFestival } from '$lib/features/festival/operations';
+  import FestivalCard from '$lib/features/festival/FestivalCard.svelte';
+  import { getPlayingNow, getUpNext } from '$lib/features/schedule/utils';
+  import type { Festival, Act } from '$lib/types';
 
-  // Active festival — in full app this would come from settings/store;
-  // here we use the first festival for demonstration.
-  const festivalsQuery = useLiveQuery(() => db.festivals.toArray(), []);
-  const actsQuery = useLiveQuery(() => db.acts.toArray(), []);
-  const highlightsQuery = useLiveQuery(() => db.highlights.toArray(), []);
+  const festivalsQuery = useLiveQuery(() => db.festivals.toArray(), [] as Festival[]);
+  const settingsQuery = useLiveQuery(() => db.settings.toCollection().first(), undefined);
 
-  let showHighlightedOnly = $state(false);
-  let sortByPriority = $state(false);
-  let selectedAct = $state<Act | undefined>(undefined);
+  const activeFestivalId = $derived(settingsQuery.value?.activeFestivalId ?? null);
 
-  const highlightMap = $derived(
-    new Map(
-      (highlightsQuery.value ?? []).map((h: UserHighlight) => [`${h.festivalId}:${h.actId}`, h])
-    )
+  // Active festival object
+  const activeFestival = $derived(
+    (festivalsQuery.value ?? []).find((f) => f.id === activeFestivalId) ??
+      (festivalsQuery.value ?? [])[0] ??
+      null
   );
 
-  const acts = $derived.by(() => {
-    let list: Act[] = actsQuery.value ?? [];
+  // Acts for the active festival (indexed query, reactive on activeFestival.id)
+  const actsQuery = useLiveQuery(
+    () =>
+      activeFestival?.id != null
+        ? db.acts.where('festivalId').equals(activeFestival.id).toArray()
+        : Promise.resolve([] as Act[]),
+    [] as Act[]
+  );
 
-    if (showHighlightedOnly) {
-      list = list.filter(
-        (a) => a.id != null && highlightMap.has(`${a.festivalId}:${a.id}`)
-      );
+  // Act counts per festival for cards (queries Dexie directly so liveQuery tracks changes)
+  const actCountsQuery = useLiveQuery(async () => {
+    const festivals = await db.festivals.toArray();
+    const counts: Record<number, number> = {};
+    for (const f of festivals) {
+      if (f.id != null) {
+        counts[f.id] = await db.acts.where('festivalId').equals(f.id).count();
+      }
     }
+    return counts;
+  }, {} as Record<number, number>);
 
-    if (sortByPriority) {
-      list = [...list].sort((a, b) => {
-        const ha = a.id != null ? highlightMap.get(`${a.festivalId}:${a.id}`) : undefined;
-        const hb = b.id != null ? highlightMap.get(`${b.festivalId}:${b.id}`) : undefined;
-        const pa = ha?.priority ?? 99;
-        const pb = hb?.priority ?? 99;
-        return pa - pb;
-      });
-    }
+  // Now/Next
+  const now = $derived(new Date());
+  const playingNow = $derived(
+    activeFestival
+      ? getPlayingNow(actsQuery.value ?? [], now, activeFestival)
+      : []
+  );
+  const upNext = $derived(
+    activeFestival
+      ? getUpNext(actsQuery.value ?? [], now, 60, activeFestival)
+      : []
+  );
 
-    return list;
-  });
-
-  function getHighlight(act: Act): UserHighlight | undefined {
-    if (act.id == null) return undefined;
-    return highlightMap.get(`${act.festivalId}:${act.id}`);
-  }
-
-  async function handleToggle(act: Act) {
-    if (act.id == null) return;
-    await toggleHighlight(act.festivalId, act.id);
-  }
-
-  function openSheet(act: Act) {
-    selectedAct = act;
-  }
-
-  function closeSheet() {
-    selectedAct = undefined;
+  async function handleActivate(festivalId: number) {
+    await setActiveFestival(festivalId);
   }
 </script>
 
 <div class="p-4">
-  <h1 class="mb-4 text-2xl font-bold">Who's On</h1>
+  {#if (festivalsQuery.value ?? []).length === 0}
+    <!-- Empty state -->
+    <div class="flex flex-col items-center justify-center gap-4 py-20 text-center">
+      <div class="text-6xl">🎪</div>
+      <h1 class="text-2xl font-bold">Welcome to Who's On</h1>
+      <p class="text-base-content/60 max-w-xs text-sm">
+        Add your first festival to start tracking acts and highlights.
+      </p>
+      <a href="/settings/" class="btn btn-primary">Add Festival</a>
+    </div>
 
-  <!-- Filter / sort controls -->
-  <div class="mb-4 flex flex-wrap gap-3">
-    <label class="flex cursor-pointer items-center gap-2">
-      <input type="checkbox" class="toggle toggle-sm" bind:checked={showHighlightedOnly} />
-      <span class="text-sm">Highlighted only</span>
-    </label>
-    <label class="flex cursor-pointer items-center gap-2">
-      <input type="checkbox" class="toggle toggle-sm" bind:checked={sortByPriority} />
-      <span class="text-sm">Sort by priority</span>
-    </label>
-  </div>
+  {:else if (festivalsQuery.value ?? []).length === 1}
+    <!-- Single festival: Now/Next summary -->
+    {@const festival = (festivalsQuery.value ?? [])[0]}
+    <h1 class="mb-4 text-2xl font-bold">{festival.name}</h1>
 
-  <!-- Act list -->
-  {#if acts.length === 0}
-    <p class="text-base-content/50 text-sm">No acts to show.</p>
+    <!-- Now Playing -->
+    <section class="mb-6">
+      <h2 class="text-base-content/60 mb-2 text-xs font-semibold uppercase tracking-wide">
+        Now Playing
+      </h2>
+      {#if playingNow.length === 0}
+        <p class="text-base-content/40 text-sm">Nothing playing right now.</p>
+      {:else}
+        <ul class="space-y-2">
+          {#each playingNow as act (act.id)}
+            <li class="rounded-lg bg-base-200 p-3">
+              <p class="font-medium">{act.name}</p>
+              <p class="text-base-content/60 text-xs">{act.stage} · until {act.endTime.slice(11, 16)}</p>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </section>
+
+    <!-- Up Next -->
+    <section>
+      <h2 class="text-base-content/60 mb-2 text-xs font-semibold uppercase tracking-wide">
+        Up Next (next 60 min)
+      </h2>
+      {#if upNext.length === 0}
+        <p class="text-base-content/40 text-sm">Nothing coming up in the next hour.</p>
+      {:else}
+        <ul class="space-y-2">
+          {#each upNext as act (act.id)}
+            <li class="rounded-lg bg-base-200 p-3">
+              <p class="font-medium">{act.name}</p>
+              <p class="text-base-content/60 text-xs">{act.stage} · {act.startTime.slice(11, 16)}</p>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </section>
+
   {:else}
-    <ul class="space-y-2">
-      {#each acts as act (act.id)}
-        {@const highlight = getHighlight(act)}
-        <li class="flex items-center gap-3 rounded-lg bg-base-200 p-3">
-          <!-- Highlight toggle -->
-          <button
-            type="button"
-            class="btn btn-circle btn-sm {highlight ? 'btn-warning' : 'btn-ghost'}"
-            aria-label={highlight ? 'Remove highlight' : 'Highlight'}
-            onclick={() => handleToggle(act)}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-4">
-              <path
-                fill-rule="evenodd"
-                d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.006Z"
-                clip-rule="evenodd"
-              />
-            </svg>
-          </button>
-
-          <!-- Act info -->
-          <button
-            type="button"
-            class="flex min-w-0 flex-1 flex-col items-start text-left"
-            onclick={() => openSheet(act)}
-          >
-            <span class="truncate font-medium">{act.name}</span>
-            <span class="text-xs text-base-content/60">{act.stage} · {act.startTime.slice(11, 16)}</span>
-          </button>
-
-          <!-- Priority badge if highlighted -->
-          {#if highlight?.priority}
-            <span class="badge badge-sm {highlight.priority === 1 ? 'badge-warning' : highlight.priority === 2 ? 'badge-success' : 'badge-info'}">
-              {highlight.priority === 1 ? '🔥' : highlight.priority === 2 ? '👍' : '🤷'}
-            </span>
-          {/if}
-        </li>
+    <!-- Multiple festivals: festival cards -->
+    <h1 class="mb-4 text-2xl font-bold">Your Festivals</h1>
+    <div class="space-y-3">
+      {#each (festivalsQuery.value ?? []) as festival (festival.id)}
+        <FestivalCard
+          {festival}
+          actCount={(actCountsQuery.value ?? {})[festival.id ?? 0] ?? 0}
+          isActive={festival.id === activeFestivalId}
+          onActivate={festival.id != null ? () => handleActivate(festival.id!) : undefined}
+        />
       {/each}
-    </ul>
+    </div>
+    <div class="mt-4">
+      <a href="/settings/" class="btn btn-outline btn-sm w-full">Add Festival</a>
+    </div>
   {/if}
 </div>
-
-<!-- Act detail sheet -->
-{#if selectedAct}
-  <ActDetailSheet
-    act={selectedAct}
-    highlight={getHighlight(selectedAct)}
-    onclose={closeSheet}
-  />
-{/if}
