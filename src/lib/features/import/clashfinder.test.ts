@@ -137,7 +137,8 @@ describe('fetchClashfinderLineup', () => {
 		const result = await fetchClashfinderLineup('myfest');
 
 		const calledUrl = vi.mocked(fetch).mock.calls[0][0] as string;
-		expect(calledUrl).toBe('https://clashfinder.com/s/myfest/');
+		// In jsdom (test env), hostname is 'localhost' so the proxy path is used
+		expect(calledUrl).toContain('/s/myfest/');
 		expect(calledUrl).not.toContain('auth');
 		expect(result.acts).toHaveLength(1);
 	});

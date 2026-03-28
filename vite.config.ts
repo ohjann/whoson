@@ -50,6 +50,28 @@ export default defineConfig({
       }
     })
   ],
+  server: {
+    proxy: {
+      '/clashfinder-proxy': {
+        target: 'https://clashfinder.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/clashfinder-proxy/, ''),
+        configure: (proxy) => {
+          // Follow redirects server-side so the browser doesn't chase them outside the proxy
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            if (proxyRes.statusCode && proxyRes.statusCode >= 300 && proxyRes.statusCode < 400 && proxyRes.headers.location) {
+              const location = proxyRes.headers.location;
+              // Rewrite absolute clashfinder.com redirects to go through the proxy
+              if (location.includes('clashfinder.com')) {
+                const url = new URL(location);
+                proxyRes.headers.location = `/clashfinder-proxy${url.pathname}${url.search}`;
+              }
+            }
+          });
+        }
+      }
+    }
+  },
   test: {
     environment: 'jsdom',
     setupFiles: ['src/tests/setup.ts'],

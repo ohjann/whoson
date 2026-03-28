@@ -8,7 +8,6 @@
 		importLineup
 	} from '$lib/features/festival/operations';
 	import { parseClashfinderUrl, fetchClashfinderLineup } from '$lib/features/import/clashfinder';
-	import { parseJsonLineup, parseCsvLineup } from '$lib/features/import/manual';
 
 	// --- Props ---
 	let {
@@ -31,7 +30,7 @@
 	const deviceTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 	// --- Step 1: Import Source ---
-	let importType = $state<'clashfinder' | 'file' | 'skip'>(
+	let importType = $state<'clashfinder' | 'skip'>(
 		initialData?.clashfinderSlug ? 'clashfinder' : 'skip'
 	);
 	let clashfinderUrl = $state(
@@ -43,7 +42,6 @@
 		[]
 	);
 	let importError = $state('');
-	let importErrors = $state<string[]>([]);
 	let isFetching = $state(false);
 
 	const clashfinderSlug = $derived(parseClashfinderUrl(clashfinderUrl));
@@ -108,46 +106,6 @@
 		} finally {
 			isFetching = false;
 		}
-	}
-
-	// --- File upload handler ---
-	function handleFileUpload(event: Event) {
-		const file = (event.target as HTMLInputElement).files?.[0];
-		if (!file) return;
-
-		importError = '';
-		importErrors = [];
-		parsedActs = [];
-
-		const reader = new FileReader();
-		reader.onload = (e) => {
-			const content = e.target?.result as string;
-			const ext = file.name.split('.').pop()?.toLowerCase();
-			const result = ext === 'csv' ? parseCsvLineup(content) : parseJsonLineup(content);
-
-			parsedActs = result.acts.map((a) => ({
-				name: a.name,
-				stage: a.stage,
-				startTime: a.startTime,
-				endTime: a.endTime
-			}));
-
-			// Derive dates from file import too
-			if (result.acts.length > 0) {
-				const starts = result.acts.map((a) => a.startTime).sort();
-				const ends = result.acts.map((a) => a.endTime).sort();
-				if (!startDate) startDate = starts[0].split('T')[0];
-				if (!endDate) endDate = ends[ends.length - 1].split('T')[0];
-			}
-
-			if (result.errors.length > 0) {
-				importErrors = result.errors;
-				if (result.acts.length === 0) {
-					importError = 'No valid acts found in this file.';
-				}
-			}
-		};
-		reader.readAsText(file);
 	}
 
 	// --- Map upload handler ---
@@ -233,13 +191,6 @@
 					<div class="text-xs text-base-content/60">Import from clashfinder.com</div>
 				</div>
 			</label>
-			<label class="flex cursor-pointer items-center gap-3 rounded-lg border border-base-300 p-4 {importType === 'file' ? 'border-primary bg-base-200' : ''}">
-				<input type="radio" name="importType" class="radio radio-primary" bind:group={importType} value="file" />
-				<div>
-					<div class="font-medium">Upload file</div>
-					<div class="text-xs text-base-content/60">JSON or CSV lineup file</div>
-				</div>
-			</label>
 			<label class="flex cursor-pointer items-center gap-3 rounded-lg border border-base-300 p-4 {importType === 'skip' ? 'border-primary bg-base-200' : ''}">
 				<input type="radio" name="importType" class="radio radio-primary" bind:group={importType} value="skip" />
 				<div>
@@ -294,43 +245,6 @@
 			</div>
 		{/if}
 
-		<!-- File upload -->
-		{#if importType === 'file'}
-			<div class="space-y-3">
-				<label class="form-control w-full">
-					<div class="label"><span class="label-text">Lineup file (JSON or CSV)</span></div>
-					<input
-						type="file"
-						class="file-input w-full"
-						accept=".json,.csv"
-						onchange={handleFileUpload}
-					/>
-				</label>
-
-				{#if importError}
-					<div class="alert alert-error text-sm">
-						<span>{importError}</span>
-					</div>
-				{/if}
-				{#if parsedActs.length > 0}
-					<div class="alert alert-success text-sm">
-						<span>{parsedActs.length} acts loaded successfully</span>
-					</div>
-				{/if}
-				{#if importErrors.length > 0}
-					<div class="rounded-lg border border-warning/30 bg-warning/5 p-3 text-sm">
-						<p class="font-medium text-warning mb-2">
-							{importErrors.length} {importErrors.length === 1 ? 'row' : 'rows'} skipped:
-						</p>
-						<ul class="space-y-1 text-xs text-base-content/70 max-h-32 overflow-y-auto">
-							{#each importErrors as err}
-								<li>• {err}</li>
-							{/each}
-						</ul>
-					</div>
-				{/if}
-			</div>
-		{/if}
 	</div>
 
 	<div class="mt-6 flex justify-end">

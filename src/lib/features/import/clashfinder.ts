@@ -14,7 +14,8 @@ export function parseClashfinderUrl(url: string): string | null {
 	try {
 		const parsed = new URL(url);
 		if (!parsed.hostname.includes('clashfinder.com')) return null;
-		const match = parsed.pathname.match(/^\/s\/([^/]+)\/?$/);
+		// Accept both /s/ (desktop) and /m/ (mobile) URLs
+		const match = parsed.pathname.match(/^\/[sm]\/([^/]+)\/?$/);
 		return match ? match[1] : null;
 	} catch {
 		return null;
@@ -24,9 +25,15 @@ export function parseClashfinderUrl(url: string): string | null {
 /**
  * Fetch and parse a Clashfinder lineup from the public HTML page.
  * No authentication required — works for any public festival.
+ * Uses a Vite dev proxy on localhost to avoid CORS.
  */
 export async function fetchClashfinderLineup(slug: string): Promise<ClashfinderResult> {
-	const url = `https://clashfinder.com/s/${slug}/`;
+	const base =
+		typeof window !== 'undefined' && window.location.hostname === 'localhost'
+			? '/clashfinder-proxy'
+			: 'https://clashfinder.com';
+	// Always use /s/ (desktop) path — it has the full HTML structure we parse
+	const url = `${base}/s/${slug}/`;
 
 	let response: Response;
 	try {
