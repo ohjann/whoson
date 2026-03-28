@@ -38,6 +38,8 @@ export interface UserHighlight {
   priority?: ActPriority;
   notes?: string;
   createdAt: string;
+  notifyMinutesBefore?: number; // minutes before act start to notify (0 = at start)
+  notificationId?: number; // Capacitor local notification ID
 }
 
 export interface FestivalMap {

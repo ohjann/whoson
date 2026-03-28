@@ -1,21 +1,36 @@
 import { db } from '$lib/db';
 import { liveQuery } from 'dexie';
 import type { ActPriority, UserHighlight } from '$lib/types';
+import { cancelActNotification, checkPermission, scheduleActNotification } from '$lib/features/notifications/local';
 
-export async function toggleHighlight(festivalId: number, actId: number): Promise<void> {
+export async function toggleHighlight(
+  festivalId: number,
+  actId: number,
+  notifyMinutesBefore?: number
+): Promise<void> {
   const existing = await db.highlights
     .where('[festivalId+actId]')
     .equals([festivalId, actId])
     .first();
 
   if (existing) {
+    await cancelActNotification(existing);
     await db.highlights.delete(existing.id!);
   } else {
-    await db.highlights.add({
+    const id = await db.highlights.add({
       festivalId,
       actId,
       createdAt: new Date().toISOString()
     });
+
+    // Schedule notification if permission granted and notifyMinutesBefore provided
+    if (notifyMinutesBefore != null && (await checkPermission())) {
+      const highlight = await db.highlights.get(id as number);
+      const act = await db.acts.get(actId);
+      if (highlight && act) {
+        await scheduleActNotification(highlight, act, notifyMinutesBefore);
+      }
+    }
   }
 }
 
