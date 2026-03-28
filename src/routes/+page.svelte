@@ -4,10 +4,12 @@
   import { setActiveFestival } from '$lib/features/festival/operations';
   import FestivalCard from '$lib/features/festival/FestivalCard.svelte';
   import { getPlayingNow, getUpNext } from '$lib/features/schedule/utils';
-  import type { Festival, Act } from '$lib/types';
+  import { exportHighlightsAsJson, exportHighlightsAsIcal, copyShareableText } from '$lib/features/export';
+  import type { Festival, Act, UserHighlight } from '$lib/types';
 
   const festivalsQuery = useLiveQuery(() => db.festivals.toArray(), [] as Festival[]);
   const settingsQuery = useLiveQuery(() => db.settings.toCollection().first(), undefined);
+  const highlightsQuery = useLiveQuery(() => db.highlights.toArray(), []);
 
   const activeFestivalId = $derived(settingsQuery.value?.activeFestivalId ?? null);
 
@@ -39,6 +41,13 @@
     return counts;
   }, {} as Record<number, number>);
 
+  // Highlights map for export
+  const highlightMap = $derived(
+    new Map(
+      (highlightsQuery.value ?? []).map((h: UserHighlight) => [`${h.festivalId}:${h.actId}`, h])
+    )
+  );
+
   // Now/Next
   const now = $derived(new Date());
   const playingNow = $derived(
@@ -54,6 +63,48 @@
 
   async function handleActivate(festivalId: number) {
     await setActiveFestival(festivalId);
+  }
+
+  // Export / share
+  let exportMenuOpen = $state(false);
+
+  const highlightedActs = $derived((actsQuery.value ?? []).filter(
+    (a: Act) => a.id != null && highlightMap.has(`${a.festivalId}:${a.id}`)
+  ));
+  const highlightsForExport = $derived(
+    (highlightsQuery.value ?? []).filter((h: UserHighlight) =>
+      highlightedActs.some((a: Act) => a.id === h.actId)
+    )
+  );
+
+  function downloadFile(content: string, filename: string, mimeType: string) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleExportJson() {
+    if (!activeFestival) return;
+    const json = exportHighlightsAsJson(activeFestival, highlightsForExport, highlightedActs);
+    downloadFile(json, 'highlights.json', 'application/json');
+    exportMenuOpen = false;
+  }
+
+  function handleExportIcal() {
+    if (!activeFestival) return;
+    const ical = exportHighlightsAsIcal(activeFestival, highlightsForExport, highlightedActs);
+    downloadFile(ical, 'highlights.ics', 'text/calendar');
+    exportMenuOpen = false;
+  }
+
+  async function handleCopyText() {
+    if (!activeFestival) return;
+    await copyShareableText(activeFestival, highlightsForExport, highlightedActs);
+    exportMenuOpen = false;
   }
 </script>
 
@@ -72,7 +123,46 @@
   {:else if (festivalsQuery.value ?? []).length === 1}
     <!-- Single festival: Now/Next summary -->
     {@const festival = (festivalsQuery.value ?? [])[0]}
-    <h1 class="mb-4 text-2xl font-bold">{festival.name}</h1>
+    <div class="mb-4 flex items-center justify-between">
+      <h1 class="text-2xl font-bold">{festival.name}</h1>
+
+      <!-- Export / share menu -->
+      {#if activeFestival && highlightsForExport.length > 0}
+        <div class="relative">
+          <button
+            type="button"
+            class="btn btn-ghost btn-sm gap-1"
+            aria-label="Export schedule"
+            onclick={() => exportMenuOpen = !exportMenuOpen}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            Share
+          </button>
+
+          {#if exportMenuOpen}
+            <div class="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg bg-base-200 shadow-lg">
+              <button
+                type="button"
+                class="flex w-full items-center gap-2 rounded-t-lg px-4 py-2 text-sm hover:bg-base-300"
+                onclick={handleExportJson}
+              >Export as JSON</button>
+              <button
+                type="button"
+                class="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-base-300"
+                onclick={handleExportIcal}
+              >Export as iCal (.ics)</button>
+              <button
+                type="button"
+                class="flex w-full items-center gap-2 rounded-b-lg px-4 py-2 text-sm hover:bg-base-300"
+                onclick={handleCopyText}
+              >Copy as text</button>
+            </div>
+          {/if}
+        </div>
+      {/if}
+    </div>
 
     <!-- Now Playing -->
     <section class="mb-6">
