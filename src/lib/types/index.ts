@@ -59,5 +59,6 @@ export interface AppSettings {
   defaultFestivalId?: number;
   activeFestivalId?: number;
   notificationsEnabled: boolean;
+  notifyMinutesBefore?: number; // default lead time for notifications (minutes)
   ntfyTopic?: string;
 }
