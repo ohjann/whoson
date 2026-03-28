@@ -1,9 +1,11 @@
 export type ActPriority = 1 | 2 | 3;
 
 export interface FestivalTheme {
-  name: string;
-  primaryColor: string;
-  secondaryColor: string;
+  preset?: 'night-rave' | 'day-festival' | 'synthwave' | 'minimal';
+  primary?: string;
+  secondary?: string;
+  accent?: string;
+  base?: string;
 }
 
 export interface Festival {

@@ -2,26 +2,25 @@
 	import '../app.css';
 	import { page } from '$app/stores';
 	import { db } from '$lib/db';
-	import { useLiveQuery } from '$lib/db/live.svelte';
+	import { applyFestivalTheme } from '$lib/features/theme/index.js';
+	import { liveQuery } from 'dexie';
 
 	let { children } = $props();
 
-	// Load active festival for theme
-	const settings = useLiveQuery(() => db.settings.toCollection().first(), undefined);
-
-	// Apply theme to html element
+	// Apply dynamic festival theme (AB-019)
 	$effect(() => {
-		const activeFestivalId = settings.value?.activeFestivalId;
-		if (activeFestivalId) {
-			db.festivals.get(activeFestivalId).then((festival) => {
-				if (festival?.theme?.name) {
-					document.documentElement.setAttribute('data-theme', festival.theme.name);
-				}
-			});
-		}
+		const sub = liveQuery(async () => {
+			const settings = await db.settings.toCollection().first();
+			if (!settings?.activeFestivalId) return undefined;
+			return db.festivals.get(settings.activeFestivalId);
+		}).subscribe({
+			next: (festival) => applyFestivalTheme(festival?.theme),
+			error: (err) => console.error('theme liveQuery error:', err)
+		});
+		return () => sub.unsubscribe();
 	});
 
-	// Nav items
+	// Nav items (AB-016)
 	const navItems = [
 		{ href: '/', label: 'Home', icon: 'home' },
 		{ href: '/schedule/', label: 'Schedule', icon: 'schedule' },
