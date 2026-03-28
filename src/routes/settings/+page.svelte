@@ -10,7 +10,6 @@
 	import { setActiveFestival, updateFestival } from '$lib/features/festival/operations';
 	import { applyFestivalTheme } from '$lib/features/theme/index.js';
 	import ThemePicker from '$lib/features/theme/ThemePicker.svelte';
-	import { subscribeToTopic, unsubscribe, sendTestNotification } from '$lib/features/notifications/ntfy';
 	import { addToast } from '$lib/features/notifications/toasts.svelte.js';
 	import { exportHighlightsAsJson } from '$lib/features/export';
 	import { getNow, setTimeOffsetHours, getTimeOffsetHours, resetTime, isTimeShifted } from '$lib/debug/time.svelte';
@@ -103,50 +102,6 @@
 			cfSyncError = e instanceof Error ? e.message : 'Failed to sync from Clashfinder';
 		} finally {
 			cfSyncing = false;
-		}
-	}
-
-	// --- ntfy.sh ---
-	let ntfyTopic = $state('');
-	let ntfySubscribed = $state(false);
-	let ntfyTestLoading = $state(false);
-	let ntfyLoaded = $state(false);
-
-	$effect(() => {
-		const s = settings;
-		if (s && !ntfyLoaded) {
-			ntfyLoaded = true;
-			ntfyTopic = s.ntfyTopic ?? '';
-		}
-	});
-
-	async function handleNtfySubscribe() {
-		const topic = ntfyTopic.trim();
-		if (!topic) return;
-		await updateSettings({ ntfyTopic: topic });
-		subscribeToTopic(topic);
-		ntfySubscribed = true;
-	}
-
-	async function handleNtfyUnsubscribe() {
-		unsubscribe();
-		ntfySubscribed = false;
-	}
-
-	async function handleTestNotification() {
-		const topic = ntfyTopic.trim();
-		if (!topic) {
-			addToast({ title: 'No topic', message: 'Enter a ntfy.sh topic first.' });
-			return;
-		}
-		ntfyTestLoading = true;
-		try {
-			await sendTestNotification(topic);
-			addToast({ title: 'Test sent', message: `Sent to ntfy.sh/${topic}` });
-		} catch {
-			addToast({ title: 'Failed', message: 'Could not send test notification.' });
-		} finally {
-			ntfyTestLoading = false;
 		}
 	}
 
@@ -449,63 +404,6 @@
 							</a>
 						</div>
 					</div>
-				</div>
-			{/if}
-		</div>
-	</section>
-
-	<!-- ntfy.sh -->
-	<section class="card bg-base-200 shadow-sm">
-		<div class="card-body gap-3">
-			<h2 class="card-title text-lg">Announcements (ntfy.sh)</h2>
-			<p class="text-sm text-base-content/70">
-				Subscribe to a <a href="https://ntfy.sh" class="link" target="_blank" rel="noopener">ntfy.sh</a> topic
-				to receive festival announcements as in-app notifications.
-			</p>
-
-			<label class="form-control">
-				<div class="label">
-					<span class="label-text">ntfy.sh topic</span>
-				</div>
-				<input
-					type="text"
-					class="input w-full"
-					placeholder="e.g. my-festival-2026"
-					bind:value={ntfyTopic}
-					disabled={ntfySubscribed}
-				/>
-			</label>
-
-			<div class="flex gap-2 flex-wrap">
-				{#if !ntfySubscribed}
-					<button
-						class="btn btn-primary btn-sm"
-						onclick={handleNtfySubscribe}
-						disabled={!ntfyTopic.trim()}
-					>
-						Subscribe
-					</button>
-				{:else}
-					<button class="btn btn-outline btn-error btn-sm" onclick={handleNtfyUnsubscribe}>
-						Unsubscribe
-					</button>
-				{/if}
-
-				<button
-					class="btn btn-outline btn-sm"
-					onclick={handleTestNotification}
-					disabled={ntfyTestLoading || !ntfyTopic.trim()}
-				>
-					{#if ntfyTestLoading}
-						<span class="loading loading-spinner loading-xs"></span>
-					{/if}
-					Send Test
-				</button>
-			</div>
-
-			{#if ntfySubscribed}
-				<div class="alert alert-success py-2">
-					<span class="text-sm">Subscribed to <strong>{ntfyTopic}</strong></span>
 				</div>
 			{/if}
 		</div>
