@@ -3,6 +3,7 @@ build/
 .svelte-kit/
 ios/
 android/
+!fastlane/**/android/
 .env
 .env.*
 !.env.example

@@ -1,0 +1,1 @@
+Initial release of WhosOn — festival schedule planner with highlights, clash detection, offline support, and notifications.

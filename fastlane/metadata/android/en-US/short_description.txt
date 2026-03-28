@@ -1,0 +1,1 @@
+Festival schedule planner with highlights, clash detection, and offline support.

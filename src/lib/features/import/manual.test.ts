@@ -122,8 +122,8 @@ describe('parseJsonLineup', () => {
         endTime: '2024-06-21T21:00:00'
       }
     ]);
-    const result = parseJsonLineup(json, 'fest-123');
-    expect(result.acts[0].festivalId).toBe('fest-123');
+    const result = parseJsonLineup(json, 1);
+    expect(result.acts[0].festivalId).toBe(1);
   });
 
   it('returns empty result for empty array', () => {
@@ -205,7 +205,7 @@ Blur,Other Stage,2024-06-23T18:00:00,2024-06-23T19:30:00`;
   it('sets festivalId when provided', () => {
     const csv = `name,stage,startTime,endTime
 Test Act,Main,2024-06-21T20:00:00,2024-06-21T21:00:00`;
-    const result = parseCsvLineup(csv, 'fest-456');
-    expect(result.acts[0].festivalId).toBe('fest-456');
+    const result = parseCsvLineup(csv, 2);
+    expect(result.acts[0].festivalId).toBe(2);
   });
 });

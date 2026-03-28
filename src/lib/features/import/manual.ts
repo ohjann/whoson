@@ -15,7 +15,7 @@ function extractField(obj: Record<string, unknown>, ...keys: string[]): string |
   return undefined;
 }
 
-export function parseJsonLineup(json: string, festivalId = ''): ParseResult {
+export function parseJsonLineup(json: string, festivalId = 0): ParseResult {
   let raw: unknown;
   try {
     raw = JSON.parse(json);
@@ -54,7 +54,6 @@ export function parseJsonLineup(json: string, festivalId = ''): ParseResult {
     }
 
     acts.push({
-      id: crypto.randomUUID(),
       festivalId,
       name: name!,
       stage: stage!,
@@ -66,7 +65,7 @@ export function parseJsonLineup(json: string, festivalId = ''): ParseResult {
   return { acts, errors };
 }
 
-export function parseCsvLineup(csv: string, festivalId = ''): ParseResult {
+export function parseCsvLineup(csv: string, festivalId = 0): ParseResult {
   const lines = csv
     .split('\n')
     .map((l) => l.trim())
@@ -105,7 +104,6 @@ export function parseCsvLineup(csv: string, festivalId = ''): ParseResult {
     }
 
     acts.push({
-      id: crypto.randomUUID(),
       festivalId,
       name: name!,
       stage: stage!,

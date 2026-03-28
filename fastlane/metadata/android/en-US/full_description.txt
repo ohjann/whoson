@@ -1,0 +1,17 @@
+WhosOn is an open-source festival schedule planner that works completely offline.
+
+Plan your festival experience by importing schedules from Clashfinder or uploading your own JSON/CSV files. Highlight acts you want to see, detect clashes between overlapping sets, and get notified before your favourite artists take the stage.
+
+Features:
+- Import festival schedules from Clashfinder or custom JSON/CSV
+- Highlight acts with priority levels and personal notes
+- Visual clash detection for overlapping sets
+- Now Playing and Up Next view for the current stage
+- Local notifications so you never miss a set
+- ntfy.sh integration for push notifications
+- Multiple festival support
+- Fully offline — all data stored locally on your device
+- No accounts, no tracking, no ads
+- Open source (MIT License)
+
+WhosOn respects your privacy. All data stays on your device using IndexedDB storage. No analytics, no telemetry, no third-party SDKs.
