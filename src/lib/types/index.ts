@@ -52,6 +52,7 @@ export interface AppSettings {
   // Note: private key is NOT stored in plaintext — use AB-004 credential encryption
   encryptedPrivateKey?: string;
   defaultFestivalId?: number;
+  activeFestivalId?: number;
   notificationsEnabled: boolean;
   ntfyTopic?: string;
 }
