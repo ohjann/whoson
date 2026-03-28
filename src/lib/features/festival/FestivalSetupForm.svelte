@@ -54,6 +54,7 @@
 		[]
 	);
 	let importError = $state('');
+	let importErrors = $state<string[]>([]);
 	let isNative = $state(false);
 
 	$effect(() => {
@@ -108,6 +109,7 @@
 		if (!file) return;
 
 		importError = '';
+		importErrors = [];
 		parsedActs = [];
 
 		const reader = new FileReader();
@@ -116,15 +118,19 @@
 			const ext = file.name.split('.').pop()?.toLowerCase();
 			const result = ext === 'csv' ? parseCsvLineup(content) : parseJsonLineup(content);
 
+			// Always import the valid acts, even if some rows failed
+			parsedActs = result.acts.map((a) => ({
+				name: a.name,
+				stage: a.stage,
+				startTime: a.startTime,
+				endTime: a.endTime
+			}));
+
 			if (result.errors.length > 0) {
-				importError = result.errors.slice(0, 3).join('; ');
-			} else {
-				parsedActs = result.acts.map((a) => ({
-					name: a.name,
-					stage: a.stage,
-					startTime: a.startTime,
-					endTime: a.endTime
-				}));
+				importErrors = result.errors;
+				if (result.acts.length === 0) {
+					importError = 'No valid acts found in this file.';
+				}
 			}
 		};
 		reader.readAsText(file);
@@ -357,9 +363,22 @@
 					<div class="alert alert-error text-sm">
 						<span>{importError}</span>
 					</div>
-				{:else if parsedActs.length > 0}
+				{/if}
+				{#if parsedActs.length > 0}
 					<div class="alert alert-success text-sm">
-						<span>{parsedActs.length} acts loaded</span>
+						<span>{parsedActs.length} acts loaded successfully</span>
+					</div>
+				{/if}
+				{#if importErrors.length > 0}
+					<div class="rounded-lg border border-warning/30 bg-warning/5 p-3 text-sm">
+						<p class="font-medium text-warning mb-2">
+							{importErrors.length} {importErrors.length === 1 ? 'row' : 'rows'} skipped:
+						</p>
+						<ul class="space-y-1 text-xs text-base-content/70 max-h-32 overflow-y-auto">
+							{#each importErrors as err}
+								<li>• {err}</li>
+							{/each}
+						</ul>
 					</div>
 				{/if}
 			</div>

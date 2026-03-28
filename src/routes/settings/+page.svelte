@@ -41,12 +41,23 @@
 		await updateSettings({ notifyMinutesBefore: Number(select.value) });
 	}
 
+	// --- Notifications ---
+	// Detect permission state reactively (check on mount + after toggle)
+	let notifPermission = $state<NotificationPermission>('default');
+	$effect(() => {
+		if (typeof Notification !== 'undefined') {
+			notifPermission = Notification.permission;
+		}
+	});
+
 	// --- Clashfinder ---
 	let cfUsername = $state('');
 	let cfPrivateKey = $state('');
 	let cfRemember = $state(false);
 	let cfSaving = $state(false);
 	let cfLoaded = $state(false);
+	let cfSyncing = $state(false);
+	let cfSyncError = $state('');
 
 	// Load stored username and decrypt private key on mount
 	$effect(() => {
@@ -72,6 +83,24 @@
 			addToast({ title: 'Error', message: 'Failed to save credentials.' });
 		} finally {
 			cfSaving = false;
+		}
+	}
+
+	async function handleSyncClashfinder() {
+		cfSyncError = '';
+		cfSyncing = true;
+		try {
+			const { refreshLineup } = await import('$lib/features/festival/operations');
+			const activeFestival = festivals.find((f) => f.id === settings?.activeFestivalId) ?? festivals[0];
+			if (!activeFestival?.id) throw new Error('No active festival');
+			if (!activeFestival.clashfinderSlug) throw new Error('Festival has no Clashfinder URL configured');
+			const publicKey = cfUsername.trim();
+			await refreshLineup(activeFestival.id, cfUsername.trim(), publicKey, cfPrivateKey);
+			addToast({ title: 'Synced', message: 'Lineup updated from Clashfinder.' });
+		} catch (e) {
+			cfSyncError = e instanceof Error ? e.message : 'Failed to sync from Clashfinder';
+		} finally {
+			cfSyncing = false;
 		}
 	}
 
@@ -189,15 +218,30 @@
 		<div class="card-body gap-3">
 			<h2 class="card-title text-lg">Notifications</h2>
 
-			<label class="flex items-center gap-3 cursor-pointer">
-				<input
-					type="checkbox"
-					class="toggle toggle-primary"
-					checked={settings?.notificationsEnabled ?? false}
-					onchange={handleNotificationsToggle}
-				/>
-				<span class="label-text">Enable local notifications</span>
-			</label>
+			{#if notifPermission === 'denied'}
+				<div class="alert alert-warning text-sm">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5 shrink-0" aria-hidden="true">
+						<path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+					</svg>
+					<div>
+						<p class="font-medium">Notifications are blocked</p>
+						<p class="mt-1 text-xs text-base-content/70">
+							You've denied notification permission. To re-enable, open your device settings,
+							find this app, and allow notifications.
+						</p>
+					</div>
+				</div>
+			{:else}
+				<label class="flex items-center gap-3 cursor-pointer">
+					<input
+						type="checkbox"
+						class="toggle toggle-primary"
+						checked={settings?.notificationsEnabled ?? false}
+						onchange={handleNotificationsToggle}
+					/>
+					<span class="label-text">Enable local notifications</span>
+				</label>
+			{/if}
 
 			<label class="form-control">
 				<div class="label">
@@ -207,7 +251,7 @@
 					class="select select-bordered w-full"
 					value={settings?.notifyMinutesBefore ?? 15}
 					onchange={handleLeadTimeChange}
-					disabled={!(settings?.notificationsEnabled ?? false)}
+					disabled={!(settings?.notificationsEnabled ?? false) || notifPermission === 'denied'}
 				>
 					{#each LEAD_TIME_OPTIONS as mins}
 						<option value={mins}>{mins} minutes before</option>
@@ -256,16 +300,48 @@
 				<span class="label-text">Remember private key (encrypted on device)</span>
 			</label>
 
-			<button
-				class="btn btn-primary btn-sm self-start"
-				onclick={handleSaveClashfinder}
-				disabled={cfSaving || !cfUsername.trim()}
-			>
-				{#if cfSaving}
-					<span class="loading loading-spinner loading-xs"></span>
-				{/if}
-				Save Credentials
-			</button>
+			<div class="flex gap-2 flex-wrap">
+				<button
+					class="btn btn-primary btn-sm"
+					onclick={handleSaveClashfinder}
+					disabled={cfSaving || !cfUsername.trim()}
+				>
+					{#if cfSaving}
+						<span class="loading loading-spinner loading-xs"></span>
+					{/if}
+					Save Credentials
+				</button>
+
+				<button
+					class="btn btn-outline btn-sm"
+					onclick={handleSyncClashfinder}
+					disabled={cfSyncing || !cfUsername.trim() || !cfPrivateKey.trim()}
+				>
+					{#if cfSyncing}
+						<span class="loading loading-spinner loading-xs"></span>
+					{/if}
+					Sync Lineup
+				</button>
+			</div>
+
+			{#if cfSyncError}
+				<div class="alert alert-error text-sm">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5 shrink-0" aria-hidden="true">
+						<path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM8.28 7.22a.75.75 0 0 0-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 1 0 1.06 1.06L10 11.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L11.06 10l1.72-1.72a.75.75 0 0 0-1.06-1.06L10 8.94 8.28 7.22Z" clip-rule="evenodd" />
+					</svg>
+					<div>
+						<p>{cfSyncError}</p>
+						<div class="flex gap-2 mt-2">
+							<button type="button" class="btn btn-sm btn-outline" onclick={handleSyncClashfinder}>
+								Retry
+							</button>
+							<a href="/festivals/new/" class="btn btn-sm btn-ghost">
+								Import manually instead
+							</a>
+						</div>
+					</div>
+				</div>
+			{/if}
 		</div>
 	</section>
 
