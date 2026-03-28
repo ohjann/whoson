@@ -172,7 +172,9 @@
       <div class="mb-4">
         <button
           type="button"
-          class="btn btn-sm w-full {isHighlighted ? 'btn-warning' : 'btn-outline'}"
+          class="btn btn-sm w-full min-h-11 {isHighlighted ? 'btn-warning' : 'btn-outline'}"
+          aria-label={isHighlighted ? `Remove highlight for ${act.name}` : `Highlight ${act.name}`}
+          aria-pressed={isHighlighted}
           onclick={handleHighlightToggle}
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-4">
@@ -232,7 +234,9 @@
                   {#each leadTimeOptions as mins}
                     <button
                       type="button"
-                      class="btn btn-xs {notifyMinutes === mins ? 'btn-primary' : 'btn-ghost'}"
+                      class="btn btn-xs min-h-11 {notifyMinutes === mins ? 'btn-primary' : 'btn-ghost'}"
+                      aria-label="{mins === 0 ? 'Notify at start' : `Notify ${mins} minutes before`}"
+                      aria-pressed={notifyMinutes === mins}
                       onclick={() => handleLeadTimeChange(mins)}
                     >
                       {mins === 0 ? 'At start' : `${mins}m`}

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import { page } from '$app/stores';
+	import { afterNavigate } from '$app/navigation';
 	import { db } from '$lib/db';
 	import { applyFestivalTheme } from '$lib/features/theme/index.js';
 	import { liveQuery } from 'dexie';
@@ -20,7 +21,15 @@
 		return () => sub.unsubscribe();
 	});
 
-	// Nav items (AB-016)
+	// Focus management on route transitions — moves focus to main h1 for screen readers
+	afterNavigate(() => {
+		const h1 = document.querySelector<HTMLElement>('main h1, h1[tabindex="-1"]');
+		if (h1) {
+			h1.focus({ preventScroll: true });
+		}
+	});
+
+	// Nav items
 	const navItems = [
 		{ href: '/', label: 'Home', icon: 'home' },
 		{ href: '/now/', label: 'Now', icon: 'now' },
@@ -44,11 +53,17 @@
 	</main>
 
 	<nav
+		aria-label="Main navigation"
 		class="btm-nav fixed bottom-0 left-0 right-0 z-50"
 		style="padding-bottom: env(safe-area-inset-bottom, 0px);"
 	>
 		{#each navItems as item}
-			<a href={item.href} class:active={isActive(item.href)}>
+			<a
+				href={item.href}
+				class:active={isActive(item.href)}
+				aria-current={isActive(item.href) ? 'page' : undefined}
+				aria-label={item.label}
+			>
 				<span class="btm-nav-label">{item.label}</span>
 			</a>
 		{/each}

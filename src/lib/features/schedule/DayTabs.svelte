@@ -28,12 +28,13 @@
       type="button"
       role="tab"
       aria-selected={selectedDay === day}
-      class="btn btn-sm flex-shrink-0 {selectedDay === day ? 'btn-primary' : 'btn-ghost'}"
+      aria-label="{formatDay(day)}{clashCount > 0 ? `, ${clashCount} clash${clashCount > 1 ? 'es' : ''}` : ''}"
+      class="btn flex-shrink-0 min-h-11 min-w-[44px] {selectedDay === day ? 'btn-primary' : 'btn-ghost'}"
       onclick={() => onSelect(day)}
     >
       {formatDay(day)}
       {#if clashCount > 0}
-        <span class="badge badge-warning badge-sm ml-1" aria-label="{clashCount} clash{clashCount > 1 ? 'es' : ''}">{clashCount}</span>
+        <span class="badge badge-warning badge-sm ml-1" aria-hidden="true">{clashCount}</span>
       {/if}
     </button>
   {/each}

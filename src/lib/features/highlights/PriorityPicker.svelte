@@ -20,7 +20,7 @@
   <!-- Priority 1: Must see (flame) -->
   <button
     type="button"
-    class={cn('btn btn-circle btn-sm', priority === 1 ? 'btn-warning' : 'btn-ghost opacity-50')}
+    class={cn('btn btn-circle min-h-11 min-w-11', priority === 1 ? 'btn-warning' : 'btn-ghost opacity-50')}
     title="Must see"
     aria-label="Must see"
     aria-pressed={priority === 1}
@@ -38,7 +38,7 @@
   <!-- Priority 2: Nice to see (thumbs up) -->
   <button
     type="button"
-    class={cn('btn btn-circle btn-sm', priority === 2 ? 'btn-success' : 'btn-ghost opacity-50')}
+    class={cn('btn btn-circle min-h-11 min-w-11', priority === 2 ? 'btn-success' : 'btn-ghost opacity-50')}
     title="Nice to see"
     aria-label="Nice to see"
     aria-pressed={priority === 2}
@@ -54,7 +54,7 @@
   <!-- Priority 3: If nothing else (shrug) -->
   <button
     type="button"
-    class={cn('btn btn-circle btn-sm', priority === 3 ? 'btn-info' : 'btn-ghost opacity-50')}
+    class={cn('btn btn-circle min-h-11 min-w-11', priority === 3 ? 'btn-info' : 'btn-ghost opacity-50')}
     title="If nothing else"
     aria-label="If nothing else"
     aria-pressed={priority === 3}

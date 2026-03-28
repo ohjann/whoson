@@ -1,5 +1,6 @@
 <script lang="ts">
   import { useLiveQuery } from '$lib/db/live.svelte';
+  import { liveQuery } from 'dexie';
   import { db } from '$lib/db';
   import { toggleHighlight } from '$lib/features/highlights/operations';
   import { groupActsByDate, findOverlaps, searchActs } from '$lib/features/schedule/utils';
@@ -7,6 +8,7 @@
   import TimeSlot from '$lib/features/schedule/TimeSlot.svelte';
   import ActCard from '$lib/features/schedule/ActCard.svelte';
   import ActDetailSheet from '$lib/features/schedule/ActDetailSheet.svelte';
+  import VirtualList from '$lib/components/ui/VirtualList.svelte';
   import type { Act, Festival, UserHighlight } from '$lib/types';
 
   const settingsQuery = useLiveQuery(() => db.settings.toCollection().first(), undefined);
@@ -20,25 +22,43 @@
       null
   );
 
-  // Acts for the active festival, ordered by startTime via compound index
-  const actsQuery = useLiveQuery(
-    () =>
-      activeFestival?.id != null
-        ? db.acts
-            .where('[festivalId+startTime]')
-            .between([activeFestival.id, ''], [activeFestival.id, '\uffff'])
-            .toArray()
-        : Promise.resolve([] as Act[]),
-    [] as Act[]
-  );
+  // Acts — use $effect to re-subscribe when activeFestivalId changes (useLiveQuery doesn't
+  // track Svelte reactive state, so we need explicit re-subscription here)
+  let actsValue = $state<Act[]>([]);
+  $effect(() => {
+    const festId = activeFestivalId; // read here so Svelte tracks this reactive dep
+    const sub = liveQuery(
+      () =>
+        festId != null
+          ? db.acts
+              .where('[festivalId+startTime]')
+              .between([festId, ''], [festId, '\uffff'])
+              .toArray()
+          : Promise.resolve([] as Act[])
+    ).subscribe({
+      next: (v) => { actsValue = v as Act[]; },
+      error: (err) => console.error('acts liveQuery error:', err)
+    });
+    return () => sub.unsubscribe();
+  });
+  const actsQuery = { get value() { return actsValue; } };
 
-  const highlightsQuery = useLiveQuery(
-    () =>
-      activeFestival?.id != null
-        ? db.highlights.where('festivalId').equals(activeFestival.id).toArray()
-        : Promise.resolve([] as UserHighlight[]),
-    [] as UserHighlight[]
-  );
+  // Highlights — same pattern
+  let highlightsValue = $state<UserHighlight[]>([]);
+  $effect(() => {
+    const festId = activeFestivalId;
+    const sub = liveQuery(
+      () =>
+        festId != null
+          ? db.highlights.where('festivalId').equals(festId).toArray()
+          : Promise.resolve([] as UserHighlight[])
+    ).subscribe({
+      next: (v) => { highlightsValue = v as UserHighlight[]; },
+      error: (err) => console.error('highlights liveQuery error:', err)
+    });
+    return () => sub.unsubscribe();
+  });
+  const highlightsQuery = { get value() { return highlightsValue; } };
 
   let selectedDay = $state<string | null>(null);
   let searchQuery = $state('');
@@ -109,10 +129,36 @@
 
   const sortedTimeSlots = $derived(Array.from(timeSlotGroups.keys()).sort());
 
-  function getHighlight(act: Act): UserHighlight | undefined {
-    if (act.id == null) return undefined;
-    return highlightMap.get(act.id);
-  }
+  type SlotItem = { id: string; type: 'slot'; time: string; height: number };
+  type ActItem = {
+    id: string;
+    type: 'act';
+    act: Act;
+    highlight: UserHighlight | undefined;
+    isClashing: boolean;
+    height: number;
+  };
+  type FlatItem = SlotItem | ActItem;
+
+  // Flatten time slots + acts into a single array for virtual scrolling
+  // TimeSlot header: ~40px; ActCard: ~80px (with genre: ~96px)
+  const flatItems = $derived.by((): FlatItem[] => {
+    const list: FlatItem[] = [];
+    for (const slot of sortedTimeSlots) {
+      list.push({ id: `slot-${slot}`, type: 'slot', time: slot, height: 40 });
+      for (const act of timeSlotGroups.get(slot) ?? []) {
+        list.push({
+          id: `act-${act.id ?? act.name + slot}`,
+          type: 'act',
+          act,
+          highlight: act.id != null ? highlightMap.get(act.id) : undefined,
+          isClashing: currentDayClashes.some(([a, b]) => a.id === act.id || b.id === act.id),
+          height: act.genre ? 96 : 80
+        });
+      }
+    }
+    return list;
+  });
 
   function getClashingActsFor(act: Act): Act[] {
     return currentDayClashes.flatMap(([a, b]) => {
@@ -120,10 +166,6 @@
       if (b.id === act.id) return [a];
       return [];
     });
-  }
-
-  function isClashing(act: Act): boolean {
-    return currentDayClashes.some(([a, b]) => a.id === act.id || b.id === act.id);
   }
 
   async function handleToggle(act: Act) {
@@ -142,9 +184,9 @@
 
 <div class="flex min-h-screen flex-col">
   <!-- Sticky header: festival name + day tabs -->
-  <div class="sticky top-0 z-30 bg-base-100 shadow-sm">
+  <header class="sticky top-0 z-30 bg-base-100 shadow-sm">
     <div class="px-4 pt-4 pb-2">
-      <h1 class="text-xl font-bold">
+      <h1 class="text-xl font-bold" tabindex="-1">
         {activeFestival?.name ?? 'Schedule'}
       </h1>
     </div>
@@ -159,9 +201,9 @@
     {/if}
 
     <!-- Sticky search bar -->
-    <div class="px-4 py-2">
+    <div class="px-4 py-2" role="search">
       <label class="input input-bordered input-sm flex items-center gap-2 w-full">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-4 text-base-content/50 flex-shrink-0">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-4 text-base-content/50 flex-shrink-0" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
         </svg>
         <input
@@ -178,29 +220,29 @@
             onclick={() => { searchQuery = ''; }}
             aria-label="Clear search"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-3">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-3" aria-hidden="true">
               <path fill-rule="evenodd" d="M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.75 0 1 1 1.06 1.06L13.06 12l5.47 5.47a.75.75 0 1 1-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
             </svg>
           </button>
         {/if}
       </label>
     </div>
-  </div>
+  </header>
 
   <!-- Content -->
-  <div class="pb-4">
+  <main class="flex-1 pb-4">
     {#if !activeFestival}
       <div class="flex flex-col items-center justify-center gap-4 py-20 text-center px-4">
-        <div class="text-5xl">🎪</div>
+        <div class="text-5xl" aria-hidden="true">🎪</div>
         <p class="text-base-content/60 text-sm">No active festival. Set one up in Settings.</p>
-        <a href="/settings/" class="btn btn-primary btn-sm">Go to Settings</a>
+        <a href="/settings/" class="btn btn-primary btn-sm" aria-label="Go to Settings to set up a festival">Go to Settings</a>
       </div>
 
     {:else if sortedDays.length === 0}
       <div class="flex flex-col items-center justify-center gap-3 py-20 text-center px-4">
-        <div class="text-5xl">📋</div>
+        <div class="text-5xl" aria-hidden="true">📋</div>
         <p class="text-base-content/60 text-sm">No acts loaded yet. Import the lineup in Settings.</p>
-        <a href="/settings/" class="btn btn-outline btn-sm">Import lineup</a>
+        <a href="/settings/" class="btn btn-outline btn-sm" aria-label="Go to Settings to import lineup">Import lineup</a>
       </div>
 
     {:else if currentDayActs.length === 0 && searchQuery}
@@ -213,33 +255,41 @@
           type="button"
           class="btn btn-outline btn-sm"
           onclick={() => { searchQuery = ''; }}
-        >
-          Clear search
-        </button>
+          aria-label="Clear search to show all acts"
+        >Clear search</button>
       </div>
 
     {:else}
-      {#each sortedTimeSlots as slot (slot)}
-        <TimeSlot time={slot} />
-        {#each (timeSlotGroups.get(slot) ?? []) as act (act.id)}
-          <ActCard
-            {act}
-            highlight={getHighlight(act)}
-            isClashing={isClashing(act)}
-            onToggle={handleToggle}
-            onClick={openSheet}
-          />
-        {/each}
-      {/each}
+      <VirtualList
+        items={flatItems}
+        buffer={5}
+        role="feed"
+        aria-label="Act schedule"
+      >
+        {#snippet item(it)}
+          {#if (it as FlatItem).type === 'slot'}
+            <TimeSlot time={(it as SlotItem).time} />
+          {:else}
+            {@const actItem = it as ActItem}
+            <ActCard
+              act={actItem.act}
+              highlight={actItem.highlight}
+              isClashing={actItem.isClashing}
+              onToggle={handleToggle}
+              onClick={openSheet}
+            />
+          {/if}
+        {/snippet}
+      </VirtualList>
     {/if}
-  </div>
+  </main>
 </div>
 
 <!-- Act detail sheet -->
 {#if selectedAct}
   <ActDetailSheet
     act={selectedAct}
-    highlight={getHighlight(selectedAct)}
+    highlight={selectedAct.id != null ? highlightMap.get(selectedAct.id) : undefined}
     clashingWith={getClashingActsFor(selectedAct)}
     onclose={closeSheet}
   />
