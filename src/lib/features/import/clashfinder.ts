@@ -7,6 +7,11 @@ export interface Act {
 	stage: string;
 }
 
+export interface ClashfinderResult {
+	title: string;
+	acts: Act[];
+}
+
 interface ClashfinderAct {
 	act: string;
 	start: string;
@@ -15,6 +20,7 @@ interface ClashfinderAct {
 }
 
 interface ClashfinderResponse {
+	title?: string;
 	data?: ClashfinderAct[];
 	[key: string]: unknown;
 }
@@ -38,7 +44,7 @@ export async function fetchClashfinderLineup(
 	username: string,
 	publicKey: string,
 	privateKey: string
-): Promise<Act[]> {
+): Promise<ClashfinderResult> {
 	const authValidUntil = String(Math.floor(Date.now() / 1000) + 3600);
 	const authParam = `event/${slug}.json`;
 	const authKey = await generateAuthKey(username, privateKey, authParam, authValidUntil);
@@ -81,10 +87,18 @@ export async function fetchClashfinderLineup(
 		throw new Error('Malformed response: expected data array in Clashfinder response');
 	}
 
-	return acts.map((item) => ({
-		name: item.act,
-		startTime: item.start,
-		endTime: item.end,
-		stage: item.stage
-	}));
+	// Derive title from response, falling back to a humanized slug
+	const title = typeof json.title === 'string' && json.title.trim()
+		? json.title.trim()
+		: slug.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
+	return {
+		title,
+		acts: acts.map((item) => ({
+			name: item.act,
+			startTime: item.start,
+			endTime: item.end,
+			stage: item.stage
+		}))
+	};
 }

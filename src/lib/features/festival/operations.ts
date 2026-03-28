@@ -69,13 +69,13 @@ export async function refreshLineup(
   if (!festival?.clashfinderSlug) {
     throw new Error('Festival has no Clashfinder slug configured');
   }
-  const fetchedActs = await fetchClashfinderLineup(
+  const result = await fetchClashfinderLineup(
     festival.clashfinderSlug,
     username,
     publicKey,
     privateKey
   );
-  await importLineup(festivalId, fetchedActs);
+  await importLineup(festivalId, result.acts);
 }
 
 export async function getFestivalBySlug(slug: string): Promise<Festival | undefined> {

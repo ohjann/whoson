@@ -45,8 +45,9 @@ describe('fetchClashfinderLineup', () => {
 		vi.unstubAllGlobals();
 	});
 
-	it('maps response fields to Act[]', async () => {
+	it('maps response fields to ClashfinderResult', async () => {
 		const mockData = {
+			title: 'Testfest 2025',
 			data: [
 				{ act: 'The Band', start: '2025-06-27T20:00', end: '2025-06-27T21:30', stage: 'Main' },
 				{ act: 'Solo Artist', start: '2025-06-27T22:00', end: '2025-06-27T23:00', stage: 'Tent' }
@@ -56,21 +57,36 @@ describe('fetchClashfinderLineup', () => {
 			new Response(JSON.stringify(mockData), { status: 200 })
 		);
 
-		const acts = await fetchClashfinderLineup('testfest', 'user', 'pubkey', 'privkey');
+		const result = await fetchClashfinderLineup('testfest', 'user', 'pubkey', 'privkey');
 
-		expect(acts).toHaveLength(2);
-		expect(acts[0]).toEqual({
+		expect(result.title).toBe('Testfest 2025');
+		expect(result.acts).toHaveLength(2);
+		expect(result.acts[0]).toEqual({
 			name: 'The Band',
 			startTime: '2025-06-27T20:00',
 			endTime: '2025-06-27T21:30',
 			stage: 'Main'
 		});
-		expect(acts[1]).toEqual({
+		expect(result.acts[1]).toEqual({
 			name: 'Solo Artist',
 			startTime: '2025-06-27T22:00',
 			endTime: '2025-06-27T23:00',
 			stage: 'Tent'
 		});
+	});
+
+	it('derives title from slug when response has no title', async () => {
+		const mockData = {
+			data: [
+				{ act: 'DJ', start: '2025-06-27T20:00', end: '2025-06-27T21:00', stage: 'Main' }
+			]
+		};
+		vi.mocked(fetch).mockResolvedValue(
+			new Response(JSON.stringify(mockData), { status: 200 })
+		);
+
+		const result = await fetchClashfinderLineup('my-fest-2025', 'user', 'pubkey', 'privkey');
+		expect(result.title).toBe('My Fest 2025');
 	});
 
 	it('throws on network failure', async () => {

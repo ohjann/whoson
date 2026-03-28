@@ -7,11 +7,14 @@
 		getDecryptedPrivateKey,
 		clearAllData
 	} from '$lib/features/settings/operations';
-	import { setActiveFestival } from '$lib/features/festival/operations';
+	import { setActiveFestival, updateFestival } from '$lib/features/festival/operations';
+	import { applyFestivalTheme } from '$lib/features/theme/index.js';
+	import ThemePicker from '$lib/features/theme/ThemePicker.svelte';
 	import { subscribeToTopic, unsubscribe, sendTestNotification } from '$lib/features/notifications/ntfy';
 	import { addToast } from '$lib/features/notifications/toasts.svelte.js';
 	import { exportHighlightsAsJson } from '$lib/features/export';
-	import type { Festival, Act, UserHighlight } from '$lib/types';
+	import { getNow, setTimeOffsetHours, getTimeOffsetHours, resetTime, isTimeShifted } from '$lib/debug/time.svelte';
+	import type { Festival, FestivalTheme, Act, UserHighlight } from '$lib/types';
 
 	const festivalsQuery = useLiveQuery(() => db.festivals.toArray(), [] as Festival[]);
 	const settingsQuery = useLiveQuery(() => db.settings.toCollection().first(), undefined);
@@ -91,7 +94,6 @@
 		cfSyncing = true;
 		try {
 			const { refreshLineup } = await import('$lib/features/festival/operations');
-			const activeFestival = festivals.find((f) => f.id === settings?.activeFestivalId) ?? festivals[0];
 			if (!activeFestival?.id) throw new Error('No active festival');
 			if (!activeFestival.clashfinderSlug) throw new Error('Festival has no Clashfinder URL configured');
 			const publicKey = cfUsername.trim();
@@ -148,12 +150,90 @@
 		}
 	}
 
+	// --- Theme & Display ---
+	const activeFestival = $derived(
+		festivals.find((f) => f.id === settings?.activeFestivalId) ?? festivals[0]
+	);
+	let dayBoundaryHour = $state(6);
+	let dayBoundaryLoaded = $state(false);
+
+	$effect(() => {
+		const f = activeFestival;
+		if (f && !dayBoundaryLoaded) {
+			dayBoundaryLoaded = true;
+			dayBoundaryHour = f.dayBoundaryHour ?? 6;
+		}
+	});
+
+	async function handleThemeChange(theme: FestivalTheme) {
+		if (!activeFestival?.id) return;
+		await updateFestival(activeFestival.id, { theme });
+		applyFestivalTheme(theme);
+		addToast({ title: 'Theme updated', message: 'Festival theme has been changed.' });
+	}
+
+	async function handleDayBoundaryChange(e: Event) {
+		const input = e.target as HTMLInputElement;
+		const val = Number(input.value);
+		dayBoundaryHour = val;
+		if (!activeFestival?.id) return;
+		await updateFestival(activeFestival.id, { dayBoundaryHour: val });
+	}
+
+	// --- Debug Mode ---
+	let debugMode = $state(false);
+	let versionTaps = $state(0);
+	let seedingDemo = $state(false);
+
+	function handleVersionTap() {
+		versionTaps++;
+		if (versionTaps >= 5) {
+			debugMode = !debugMode;
+			versionTaps = 0;
+			if (debugMode) {
+				addToast({ title: 'Debug mode', message: 'Debug tools enabled.' });
+			}
+		}
+		// Reset tap count after 2 seconds of inactivity
+		setTimeout(() => { versionTaps = 0; }, 2000);
+	}
+
+	async function handleSeedDemo() {
+		seedingDemo = true;
+		try {
+			const { seedDemoFestival } = await import('$lib/debug/seed');
+			await seedDemoFestival();
+			addToast({ title: 'Demo loaded', message: 'Demo festival created with acts playing now.' });
+		} catch (e) {
+			addToast({ title: 'Error', message: e instanceof Error ? e.message : 'Failed to seed demo' });
+		} finally {
+			seedingDemo = false;
+		}
+	}
+
+	async function handleClearDemo() {
+		try {
+			const { clearDemoFestival } = await import('$lib/debug/seed');
+			await clearDemoFestival();
+			addToast({ title: 'Cleared', message: 'Demo festival removed.' });
+		} catch {
+			addToast({ title: 'Error', message: 'Failed to clear demo festival.' });
+		}
+	}
+
+	function handleTimeSlider(e: Event) {
+		const input = e.target as HTMLInputElement;
+		setTimeOffsetHours(Number(input.value));
+	}
+
+	const debugNow = $derived(getNow());
+	const debugTimeOffset = $derived(getTimeOffsetHours());
+
 	// --- Data Management ---
 	let showClearConfirm = $state(false);
 	let clearLoading = $state(false);
 
 	function handleExportHighlights() {
-		const activeFestival = festivals.find((f) => f.id === settings?.activeFestivalId) ?? festivals[0];
 		if (!activeFestival) {
 			addToast({ title: 'No festival', message: 'No active festival to export.' });
 			return;
@@ -212,6 +292,35 @@
 			{/if}
 		</div>
 	</section>
+
+	<!-- Theme & Display -->
+	{#if activeFestival}
+		<section class="card bg-base-200 shadow-sm">
+			<div class="card-body gap-3">
+				<h2 class="card-title text-lg">Theme & Display</h2>
+
+				<ThemePicker
+					value={activeFestival.theme}
+					onchange={handleThemeChange}
+				/>
+
+				<label class="form-control w-full mt-2">
+					<div class="label">
+						<span class="label-text">Day boundary hour</span>
+						<span class="label-text-alt text-base-content/60">Hour when the "day" resets</span>
+					</div>
+					<input
+						type="number"
+						class="input input-bordered w-full"
+						min="0"
+						max="12"
+						bind:value={dayBoundaryHour}
+						onchange={handleDayBoundaryChange}
+					/>
+				</label>
+			</div>
+		</section>
+	{/if}
 
 	<!-- Notifications -->
 	<section class="card bg-base-200 shadow-sm">
@@ -453,9 +562,13 @@
 	<section class="card bg-base-200 shadow-sm">
 		<div class="card-body gap-2">
 			<h2 class="card-title text-lg">About</h2>
-			<p class="text-sm">
+			<button
+				type="button"
+				class="text-sm text-left"
+				onclick={handleVersionTap}
+			>
 				<span class="font-semibold">WhosOn</span> — version 0.0.1
-			</p>
+			</button>
 			<p class="text-sm text-base-content/70">Festival schedule companion app.</p>
 			<div class="flex flex-col gap-1 text-sm">
 				<a
@@ -470,4 +583,75 @@
 			</div>
 		</div>
 	</section>
+
+	<!-- Debug Tools (hidden until version tapped 5x) -->
+	{#if debugMode}
+		<section class="card bg-base-200 shadow-sm border border-warning/30">
+			<div class="card-body gap-3">
+				<h2 class="card-title text-lg text-warning">Debug Tools</h2>
+
+				<!-- Demo Festival -->
+				<div class="space-y-2">
+					<p class="text-sm font-medium">Demo Festival</p>
+					<p class="text-xs text-base-content/60">
+						Load a 3-day festival with acts across 5 stages, centered around now.
+					</p>
+					<div class="flex gap-2">
+						<button
+							class="btn btn-warning btn-sm"
+							onclick={handleSeedDemo}
+							disabled={seedingDemo}
+						>
+							{#if seedingDemo}
+								<span class="loading loading-spinner loading-xs"></span>
+							{/if}
+							Load Demo Festival
+						</button>
+						<button class="btn btn-ghost btn-sm" onclick={handleClearDemo}>
+							Clear Demo
+						</button>
+					</div>
+				</div>
+
+				<!-- Time Travel -->
+				<div class="space-y-2">
+					<p class="text-sm font-medium">Time Travel</p>
+					<p class="text-xs text-base-content/60">
+						Shift the app's clock forward or backward to test "Now Playing".
+					</p>
+
+					<input
+						type="range"
+						class="range range-warning range-sm w-full"
+						min="-24"
+						max="24"
+						step="0.5"
+						value={debugTimeOffset}
+						oninput={handleTimeSlider}
+					/>
+					<div class="flex justify-between text-xs text-base-content/50">
+						<span>-24h</span>
+						<span class="font-mono {isTimeShifted() ? 'text-warning font-semibold' : ''}">
+							{#if isTimeShifted()}
+								{debugTimeOffset > 0 ? '+' : ''}{debugTimeOffset.toFixed(1)}h
+							{:else}
+								now
+							{/if}
+						</span>
+						<span>+24h</span>
+					</div>
+
+					<p class="text-xs font-mono text-base-content/60">
+						App time: {debugNow.toLocaleTimeString()} {debugNow.toLocaleDateString()}
+					</p>
+
+					{#if isTimeShifted()}
+						<button class="btn btn-ghost btn-xs" onclick={resetTime}>
+							Reset to real time
+						</button>
+					{/if}
+				</div>
+			</div>
+		</section>
+	{/if}
 </div>

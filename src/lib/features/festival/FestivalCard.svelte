@@ -24,7 +24,7 @@
   {#if festival.theme}
     <div
       class="h-1.5 rounded-t-2xl"
-      style="background: linear-gradient(to right, {festival.theme.primaryColor}, {festival.theme.secondaryColor})"
+      style="background: linear-gradient(to right, {festival.theme.primary ?? '#b14aed'}, {festival.theme.secondary ?? '#ff2d78'})"
     ></div>
   {/if}
 

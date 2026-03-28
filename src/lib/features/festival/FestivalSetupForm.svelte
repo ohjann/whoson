@@ -7,9 +7,9 @@
 		setActiveFestival,
 		importLineup
 	} from '$lib/features/festival/operations';
-	import { parseClashfinderUrl } from '$lib/features/import/clashfinder';
+	import { parseClashfinderUrl, fetchClashfinderLineup } from '$lib/features/import/clashfinder';
 	import { parseJsonLineup, parseCsvLineup } from '$lib/features/import/manual';
-	import type { FestivalTheme } from '$lib/types';
+	import { getDecryptedPrivateKey } from '$lib/features/settings/operations';
 
 	// --- Props ---
 	let {
@@ -21,30 +21,20 @@
 		festivalId?: number;
 		initialData?: {
 			name: string;
-			location?: string;
 			startDate: string;
 			endDate: string;
 			timezone: string;
-			dayBoundaryHour: number;
-			theme?: FestivalTheme;
 			clashfinderSlug?: string;
 		};
 	} = $props();
 
-	// --- Timezone list ---
-	const timezones: string[] = Intl.supportedValuesOf('timeZone');
+	// --- Device timezone ---
 	const deviceTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-	// --- Step 1: Name & Details ---
-	let name = $state(initialData?.name ?? '');
-	let location = $state(initialData?.location ?? '');
-	let startDate = $state(initialData?.startDate ?? '');
-	let endDate = $state(initialData?.endDate ?? '');
-	let timezone = $state(initialData?.timezone ?? deviceTimezone);
-	let dayBoundaryHour = $state(initialData?.dayBoundaryHour ?? 6);
-
-	// --- Step 2: Import Lineup ---
-	let importType = $state<'clashfinder' | 'file' | 'skip'>('skip');
+	// --- Step 1: Import Source ---
+	let importType = $state<'clashfinder' | 'file' | 'skip'>(
+		initialData?.clashfinderSlug ? 'clashfinder' : 'skip'
+	);
 	let clashfinderUrl = $state(
 		initialData?.clashfinderSlug
 			? `https://clashfinder.com/s/${initialData.clashfinderSlug}/`
@@ -56,9 +46,9 @@
 	let importError = $state('');
 	let importErrors = $state<string[]>([]);
 	let isNative = $state(false);
+	let isFetching = $state(false);
 
 	$effect(() => {
-		// Detect Capacitor native platform
 		import('@capacitor/core')
 			.then(({ Capacitor }) => {
 				isNative = Capacitor.isNativePlatform();
@@ -70,26 +60,19 @@
 
 	const clashfinderSlug = $derived(parseClashfinderUrl(clashfinderUrl));
 
+	// --- Step 2: Details (pre-filled from import) ---
+	let name = $state(initialData?.name ?? '');
+	let startDate = $state(initialData?.startDate ?? '');
+	let endDate = $state(initialData?.endDate ?? '');
+	let timezone = $state(initialData?.timezone ?? deviceTimezone);
+
 	// --- Step 3: Map ---
 	let mapBlob = $state<Blob | null>(null);
 	let mapPreviewUrl = $state('');
 
-	// --- Step 4: Theme ---
-	const themePresets = [
-		{ name: 'nightrave', label: 'Night Rave', description: 'Dark with neon accents', swatch: '#b14aed' },
-		{ name: 'dayfestival', label: 'Day Festival', description: 'Warm, vibrant colors', swatch: '#f59e0b' },
-		{ name: 'synthwave', label: 'Synthwave', description: 'Retro synth vibes', swatch: '#e779c1' },
-		{ name: 'minimal', label: 'Minimal', description: 'Clean, high contrast', swatch: '#111111' },
-		{ name: 'custom', label: 'Custom', description: 'Pick your own colors', swatch: null }
-	] as const;
-
-	let selectedThemeName = $state(initialData?.theme?.name ?? 'nightrave');
-	let customPrimary = $state(initialData?.theme?.primaryColor ?? '#7c3aed');
-	let customSecondary = $state(initialData?.theme?.secondaryColor ?? '#db2777');
-
 	// --- Navigation ---
 	let currentStep = $state(1);
-	const totalSteps = 5;
+	const totalSteps = 3;
 
 	function nextStep() {
 		currentStep = Math.min(totalSteps, currentStep + 1);
@@ -99,9 +82,52 @@
 	}
 
 	// --- Validation ---
-	const step1Valid = $derived(
-		name.trim() !== '' && startDate !== '' && endDate !== '' && timezone !== ''
-	);
+	const step2Valid = $derived(name.trim() !== '' && startDate !== '' && endDate !== '');
+
+	// --- Clashfinder fetch ---
+	async function handleClashfinderFetch() {
+		if (!clashfinderSlug) return;
+		isFetching = true;
+		importError = '';
+		parsedActs = [];
+
+		try {
+			const settings = await db.settings.toCollection().first();
+			const username = settings?.clashfinderUsername ?? '';
+			const privateKey = await getDecryptedPrivateKey() ?? '';
+			if (!username || !privateKey) {
+				throw new Error('Clashfinder credentials not set. Add them in Settings first.');
+			}
+
+			const result = await fetchClashfinderLineup(clashfinderSlug, username, username, privateKey);
+
+			parsedActs = result.acts.map((a) => ({
+				name: a.name,
+				stage: a.stage,
+				startTime: a.startTime,
+				endTime: a.endTime
+			}));
+
+			// Pre-fill festival details from import
+			if (result.title && !name) {
+				name = result.title;
+			}
+
+			// Derive date range from act times
+			if (result.acts.length > 0) {
+				const starts = result.acts.map((a) => a.startTime).sort();
+				const ends = result.acts.map((a) => a.endTime).sort();
+				const derivedStart = starts[0].split('T')[0];
+				const derivedEnd = ends[ends.length - 1].split('T')[0];
+				if (!startDate) startDate = derivedStart;
+				if (!endDate) endDate = derivedEnd;
+			}
+		} catch (e) {
+			importError = e instanceof Error ? e.message : 'Failed to fetch from Clashfinder';
+		} finally {
+			isFetching = false;
+		}
+	}
 
 	// --- File upload handler ---
 	function handleFileUpload(event: Event) {
@@ -118,13 +144,20 @@
 			const ext = file.name.split('.').pop()?.toLowerCase();
 			const result = ext === 'csv' ? parseCsvLineup(content) : parseJsonLineup(content);
 
-			// Always import the valid acts, even if some rows failed
 			parsedActs = result.acts.map((a) => ({
 				name: a.name,
 				stage: a.stage,
 				startTime: a.startTime,
 				endTime: a.endTime
 			}));
+
+			// Derive dates from file import too
+			if (result.acts.length > 0) {
+				const starts = result.acts.map((a) => a.startTime).sort();
+				const ends = result.acts.map((a) => a.endTime).sort();
+				if (!startDate) startDate = starts[0].split('T')[0];
+				if (!endDate) endDate = ends[ends.length - 1].split('T')[0];
+			}
 
 			if (result.errors.length > 0) {
 				importErrors = result.errors;
@@ -153,19 +186,12 @@
 		saving = true;
 		saveError = '';
 		try {
-			const theme: FestivalTheme =
-				selectedThemeName === 'custom'
-					? { name: 'custom', primaryColor: customPrimary, secondaryColor: customSecondary }
-					: { name: selectedThemeName, primaryColor: '', secondaryColor: '' };
-
 			const festivalData = {
 				name: name.trim(),
-				location: location.trim() || undefined,
 				timezone,
-				dayBoundaryHour,
+				dayBoundaryHour: 6,
 				startDate,
 				endDate,
-				theme,
 				clashfinderSlug:
 					importType === 'clashfinder' && clashfinderSlug ? clashfinderSlug : undefined
 			};
@@ -188,8 +214,8 @@
 				});
 			}
 
-			// Import lineup from file if provided
-			if (importType === 'file' && parsedActs.length > 0) {
+			// Import lineup if acts were loaded
+			if (parsedActs.length > 0) {
 				await importLineup(fId, parsedActs);
 			}
 
@@ -204,111 +230,40 @@
 
 <!-- Step indicator -->
 <ul class="steps steps-horizontal w-full mb-6 text-xs">
-	{#each ['Details', 'Lineup', 'Map', 'Theme', 'Confirm'] as stepLabel, i}
+	{#each ['Import', 'Details', 'Map'] as stepLabel, i}
 		<li class="step {currentStep > i ? 'step-primary' : ''}">{stepLabel}</li>
 	{/each}
 </ul>
 
-<!-- Step 1: Name & Details -->
+<!-- Step 1: Import Source -->
 {#if currentStep === 1}
-	<div class="space-y-4">
-		<h2 class="text-xl font-bold">Festival Details</h2>
-
-		<label class="form-control w-full">
-			<div class="label"><span class="label-text">Festival name *</span></div>
-			<input
-				type="text"
-				class="input input-bordered w-full"
-				placeholder="e.g. Glastonbury 2026"
-				bind:value={name}
-				required
-			/>
-		</label>
-
-		<label class="form-control w-full">
-			<div class="label"><span class="label-text">Location</span></div>
-			<input
-				type="text"
-				class="input input-bordered w-full"
-				placeholder="e.g. Worthy Farm, Somerset, UK"
-				bind:value={location}
-			/>
-		</label>
-
-		<div class="grid grid-cols-2 gap-3">
-			<label class="form-control">
-				<div class="label"><span class="label-text">Start date *</span></div>
-				<input type="date" class="input input-bordered w-full" bind:value={startDate} required />
-			</label>
-			<label class="form-control">
-				<div class="label"><span class="label-text">End date *</span></div>
-				<input type="date" class="input input-bordered w-full" bind:value={endDate} required />
-			</label>
-		</div>
-
-		<label class="form-control w-full">
-			<div class="label">
-				<span class="label-text">Timezone *</span>
-				<span class="label-text-alt text-base-content/60">Default: your device timezone</span>
-			</div>
-			<select class="select select-bordered w-full" bind:value={timezone}>
-				{#each timezones as tz}
-					<option value={tz}>{tz}</option>
-				{/each}
-			</select>
-		</label>
-
-		<label class="form-control w-full">
-			<div class="label">
-				<span class="label-text">Day boundary hour</span>
-				<span class="label-text-alt text-base-content/60">Hour when the "day" resets</span>
-			</div>
-			<input
-				type="number"
-				class="input input-bordered w-full"
-				min="0"
-				max="12"
-				bind:value={dayBoundaryHour}
-			/>
-		</label>
-	</div>
-
-	<div class="mt-6 flex justify-end">
-		<button class="btn btn-primary" onclick={nextStep} disabled={!step1Valid}>
-			Next
-		</button>
-	</div>
-{/if}
-
-<!-- Step 2: Import Lineup -->
-{#if currentStep === 2}
 	<div class="space-y-4">
 		<h2 class="text-xl font-bold">Import Lineup</h2>
 		<p class="text-sm text-base-content/60">
-			Optionally import your festival lineup. You can also add this later.
+			Start by importing your lineup — we'll fill in the rest from there.
 		</p>
 
 		<!-- Import type selector -->
-		<div class="join join-vertical w-full">
-			<label class="join-item flex cursor-pointer items-center gap-3 rounded-lg border border-base-300 p-4">
-				<input type="radio" name="importType" class="radio" bind:group={importType} value="clashfinder" />
+		<div class="space-y-2">
+			<label class="flex cursor-pointer items-center gap-3 rounded-lg border border-base-300 p-4 {importType === 'clashfinder' ? 'border-primary bg-base-200' : ''}">
+				<input type="radio" name="importType" class="radio radio-primary" bind:group={importType} value="clashfinder" />
 				<div>
 					<div class="font-medium">Clashfinder URL</div>
 					<div class="text-xs text-base-content/60">Import from clashfinder.com</div>
 				</div>
 			</label>
-			<label class="join-item flex cursor-pointer items-center gap-3 rounded-lg border border-base-300 p-4 mt-2">
-				<input type="radio" name="importType" class="radio" bind:group={importType} value="file" />
+			<label class="flex cursor-pointer items-center gap-3 rounded-lg border border-base-300 p-4 {importType === 'file' ? 'border-primary bg-base-200' : ''}">
+				<input type="radio" name="importType" class="radio radio-primary" bind:group={importType} value="file" />
 				<div>
 					<div class="font-medium">Upload file</div>
 					<div class="text-xs text-base-content/60">JSON or CSV lineup file</div>
 				</div>
 			</label>
-			<label class="join-item flex cursor-pointer items-center gap-3 rounded-lg border border-base-300 p-4 mt-2">
-				<input type="radio" name="importType" class="radio" bind:group={importType} value="skip" />
+			<label class="flex cursor-pointer items-center gap-3 rounded-lg border border-base-300 p-4 {importType === 'skip' ? 'border-primary bg-base-200' : ''}">
+				<input type="radio" name="importType" class="radio radio-primary" bind:group={importType} value="skip" />
 				<div>
-					<div class="font-medium">Skip for now</div>
-					<div class="text-xs text-base-content/60">Add lineup later</div>
+					<div class="font-medium">Set up manually</div>
+					<div class="text-xs text-base-content/60">Enter festival details yourself</div>
 				</div>
 			</label>
 		</div>
@@ -323,7 +278,7 @@
 						</svg>
 						<span class="text-sm">
 							Clashfinder import requires the mobile app due to browser CORS restrictions.
-							The URL will be saved and you can import the lineup from the app.
+							The URL will be saved and you can sync the lineup from the app.
 						</span>
 					</div>
 				{/if}
@@ -341,7 +296,34 @@
 				{#if clashfinderUrl && !clashfinderSlug}
 					<div class="text-sm text-error">Not a valid Clashfinder URL</div>
 				{:else if clashfinderSlug}
-					<div class="text-sm text-success">Slug: <code>{clashfinderSlug}</code></div>
+					<div class="text-sm text-success">
+						<span>Ready to import: <code>{clashfinderSlug}</code></span>
+					</div>
+
+					{#if isNative && !parsedActs.length}
+						<button
+							class="btn btn-primary btn-sm"
+							onclick={handleClashfinderFetch}
+							disabled={isFetching}
+						>
+							{#if isFetching}
+								<span class="loading loading-spinner loading-xs"></span>
+							{/if}
+							Fetch Lineup
+						</button>
+					{/if}
+				{/if}
+
+				{#if parsedActs.length > 0}
+					<div class="alert alert-success text-sm">
+						<span>{parsedActs.length} acts loaded{name ? ` from "${name}"` : ''}</span>
+					</div>
+				{/if}
+
+				{#if importError}
+					<div class="alert alert-error text-sm">
+						<span>{importError}</span>
+					</div>
 				{/if}
 			</div>
 		{/if}
@@ -385,9 +367,55 @@
 		{/if}
 	</div>
 
+	<div class="mt-6 flex justify-end">
+		<button class="btn btn-primary" onclick={nextStep}>
+			Next
+		</button>
+	</div>
+{/if}
+
+<!-- Step 2: Details (pre-filled from import) -->
+{#if currentStep === 2}
+	<div class="space-y-4">
+		<h2 class="text-xl font-bold">Festival Details</h2>
+		{#if parsedActs.length > 0}
+			<p class="text-sm text-base-content/60">
+				We've pre-filled what we could from your import. Check it looks right.
+			</p>
+		{/if}
+
+		<label class="form-control w-full">
+			<div class="label"><span class="label-text">Festival name *</span></div>
+			<input
+				type="text"
+				class="input input-bordered w-full"
+				placeholder="e.g. Glastonbury 2026"
+				bind:value={name}
+				required
+			/>
+		</label>
+
+		<div class="grid grid-cols-2 gap-3">
+			<label class="form-control">
+				<div class="label"><span class="label-text">Start date *</span></div>
+				<input type="date" class="input input-bordered w-full" bind:value={startDate} required />
+			</label>
+			<label class="form-control">
+				<div class="label"><span class="label-text">End date *</span></div>
+				<input type="date" class="input input-bordered w-full" bind:value={endDate} required />
+			</label>
+		</div>
+
+		<div class="text-xs text-base-content/50">
+			Timezone: {timezone}
+		</div>
+	</div>
+
 	<div class="mt-6 flex justify-between">
 		<button class="btn btn-ghost" onclick={prevStep}>Back</button>
-		<button class="btn btn-primary" onclick={nextStep}>Next</button>
+		<button class="btn btn-primary" onclick={nextStep} disabled={!step2Valid}>
+			Next
+		</button>
 	</div>
 {/if}
 
@@ -396,7 +424,7 @@
 	<div class="space-y-4">
 		<h2 class="text-xl font-bold">Festival Map</h2>
 		<p class="text-sm text-base-content/60">
-			Optionally upload a festival map image. You can add or change this later.
+			Upload a festival map image, or skip and add one later.
 		</p>
 
 		<label class="form-control w-full">
@@ -422,125 +450,6 @@
 				</button>
 			</div>
 		{/if}
-	</div>
-
-	<div class="mt-6 flex justify-between">
-		<button class="btn btn-ghost" onclick={prevStep}>Back</button>
-		<button class="btn btn-primary" onclick={nextStep}>Next</button>
-	</div>
-{/if}
-
-<!-- Step 4: Theme -->
-{#if currentStep === 4}
-	<div class="space-y-4">
-		<h2 class="text-xl font-bold">Choose a Theme</h2>
-		<p class="text-sm text-base-content/60">Pick a visual theme for your festival.</p>
-
-		<div class="grid grid-cols-2 gap-3">
-			{#each themePresets as preset}
-				<button
-					type="button"
-					class="rounded-xl border-2 p-4 text-left transition-all {selectedThemeName === preset.name
-						? 'border-primary bg-base-200'
-						: 'border-base-300 hover:border-base-content/30'}"
-					onclick={() => (selectedThemeName = preset.name)}
-				>
-					<div class="flex items-center gap-2 mb-1">
-						{#if preset.swatch}
-							<span
-								class="inline-block size-4 rounded-full border border-base-300"
-								style="background-color: {preset.swatch}"
-							></span>
-						{:else}
-							<span class="inline-block size-4 rounded-full border border-dashed border-base-content/40"></span>
-						{/if}
-						<span class="font-medium text-sm">{preset.label}</span>
-					</div>
-					<p class="text-xs text-base-content/60">{preset.description}</p>
-				</button>
-			{/each}
-		</div>
-
-		<!-- Custom color inputs -->
-		{#if selectedThemeName === 'custom'}
-			<div class="grid grid-cols-2 gap-3">
-				<label class="form-control">
-					<div class="label"><span class="label-text">Primary color</span></div>
-					<div class="flex items-center gap-2">
-						<input type="color" class="h-10 w-12 cursor-pointer rounded border border-base-300" bind:value={customPrimary} />
-						<input type="text" class="input input-bordered flex-1 font-mono text-sm" bind:value={customPrimary} placeholder="#7c3aed" />
-					</div>
-				</label>
-				<label class="form-control">
-					<div class="label"><span class="label-text">Secondary color</span></div>
-					<div class="flex items-center gap-2">
-						<input type="color" class="h-10 w-12 cursor-pointer rounded border border-base-300" bind:value={customSecondary} />
-						<input type="text" class="input input-bordered flex-1 font-mono text-sm" bind:value={customSecondary} placeholder="#db2777" />
-					</div>
-				</label>
-			</div>
-		{/if}
-	</div>
-
-	<div class="mt-6 flex justify-between">
-		<button class="btn btn-ghost" onclick={prevStep}>Back</button>
-		<button class="btn btn-primary" onclick={nextStep}>Next</button>
-	</div>
-{/if}
-
-<!-- Step 5: Confirm -->
-{#if currentStep === 5}
-	<div class="space-y-4">
-		<h2 class="text-xl font-bold">
-			{mode === 'create' ? 'Create Festival' : 'Save Changes'}
-		</h2>
-
-		<div class="card bg-base-200">
-			<div class="card-body gap-3 p-4">
-				<div class="flex justify-between items-start">
-					<span class="text-sm font-medium text-base-content/60">Name</span>
-					<span class="text-sm font-bold text-right">{name}</span>
-				</div>
-				{#if location}
-					<div class="flex justify-between items-start">
-						<span class="text-sm font-medium text-base-content/60">Location</span>
-						<span class="text-sm text-right">{location}</span>
-					</div>
-				{/if}
-				<div class="flex justify-between">
-					<span class="text-sm font-medium text-base-content/60">Dates</span>
-					<span class="text-sm">{startDate} – {endDate}</span>
-				</div>
-				<div class="flex justify-between">
-					<span class="text-sm font-medium text-base-content/60">Timezone</span>
-					<span class="text-sm">{timezone}</span>
-				</div>
-				<div class="flex justify-between">
-					<span class="text-sm font-medium text-base-content/60">Day boundary</span>
-					<span class="text-sm">{dayBoundaryHour}:00</span>
-				</div>
-				<div class="flex justify-between">
-					<span class="text-sm font-medium text-base-content/60">Lineup</span>
-					<span class="text-sm">
-						{#if importType === 'clashfinder' && clashfinderSlug}
-							Clashfinder: {clashfinderSlug}
-						{:else if importType === 'file' && parsedActs.length > 0}
-							{parsedActs.length} acts from file
-						{:else}
-							Not imported
-						{/if}
-					</span>
-				</div>
-				<div class="flex justify-between">
-					<span class="text-sm font-medium text-base-content/60">Map</span>
-					<span class="text-sm">{mapBlob ? 'Image uploaded' : 'None'}</span>
-				</div>
-				<div class="flex justify-between items-center">
-					<span class="text-sm font-medium text-base-content/60">Theme</span>
-					<span class="text-sm capitalize">{selectedThemeName}</span>
-				</div>
-			</div>
-		</div>
 
 		{#if saveError}
 			<div class="alert alert-error text-sm">
@@ -551,11 +460,21 @@
 
 	<div class="mt-6 flex justify-between">
 		<button class="btn btn-ghost" onclick={prevStep} disabled={saving}>Back</button>
-		<button class="btn btn-primary" onclick={handleSave} disabled={saving}>
-			{#if saving}
-				<span class="loading loading-spinner loading-sm"></span>
+		<div class="flex gap-2">
+			{#if !mapBlob}
+				<button class="btn btn-ghost" onclick={handleSave} disabled={saving}>
+					{#if saving}
+						<span class="loading loading-spinner loading-sm"></span>
+					{/if}
+					Skip
+				</button>
 			{/if}
-			{mode === 'create' ? 'Create Festival' : 'Save Changes'}
-		</button>
+			<button class="btn btn-primary" onclick={handleSave} disabled={saving}>
+				{#if saving}
+					<span class="loading loading-spinner loading-sm"></span>
+				{/if}
+				{mode === 'create' ? 'Create Festival' : 'Save Changes'}
+			</button>
+		</div>
 	</div>
 {/if}

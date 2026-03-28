@@ -11,7 +11,6 @@ export interface FestivalTheme {
 export interface Festival {
   id?: number;
   name: string;
-  location?: string;
   timezone: string; // IANA timezone string, e.g. 'Europe/Amsterdam'
   dayBoundaryHour: number; // default 6, hour at which the "day" resets
   startDate: string; // ISO 8601 date string

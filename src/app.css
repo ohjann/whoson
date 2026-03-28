@@ -4,38 +4,107 @@
 }
 
 @theme {
-  /* Night Rave - dark, neon accents */
-  --color-nightrave-base-100: #0d0d1a;
-  --color-nightrave-base-200: #1a1a2e;
-  --color-nightrave-base-300: #16213e;
-  --color-nightrave-primary: #b14aed;
-  --color-nightrave-secondary: #ff2d78;
-  --color-nightrave-accent: #00d4ff;
-  --color-nightrave-neutral: #1a1a2e;
-  --color-nightrave-base-content: #e0e0ff;
-
-  /* Day Festival - warm, vibrant */
-  --color-dayfestival-base-100: #fffbf0;
-  --color-dayfestival-base-200: #fef3c7;
-  --color-dayfestival-base-300: #fde68a;
-  --color-dayfestival-primary: #f59e0b;
-  --color-dayfestival-secondary: #ef4444;
-  --color-dayfestival-accent: #10b981;
-  --color-dayfestival-neutral: #1f2937;
-  --color-dayfestival-base-content: #1f2937;
-
-  /* Minimal - clean, high contrast */
-  --color-minimal-base-100: #ffffff;
-  --color-minimal-base-200: #f5f5f5;
-  --color-minimal-base-300: #e5e5e5;
-  --color-minimal-primary: #111111;
-  --color-minimal-secondary: #555555;
-  --color-minimal-accent: #0066cc;
-  --color-minimal-neutral: #111111;
-  --color-minimal-base-content: #111111;
-
   /* Base typography */
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+/* ── Night Rave ── dark, neon accents */
+[data-theme="nightrave"] {
+  color-scheme: dark;
+  --color-base-100: #0d0d1a;
+  --color-base-200: #1a1a2e;
+  --color-base-300: #16213e;
+  --color-base-content: #e0e0ff;
+  --color-primary: #b14aed;
+  --color-primary-content: #f0e0ff;
+  --color-secondary: #ff2d78;
+  --color-secondary-content: #ffe0ec;
+  --color-accent: #00d4ff;
+  --color-accent-content: #001820;
+  --color-neutral: #1a1a2e;
+  --color-neutral-content: #c8c8e0;
+  --color-info: #38bdf8;
+  --color-info-content: #001e30;
+  --color-success: #4ade80;
+  --color-success-content: #002a10;
+  --color-warning: #fbbf24;
+  --color-warning-content: #1a1400;
+  --color-error: #fb7185;
+  --color-error-content: #2a0008;
+  --radius-selector: 1rem;
+  --radius-field: 0.5rem;
+  --radius-box: 1rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* ── Day Festival ── warm, vibrant, light */
+[data-theme="dayfestival"] {
+  color-scheme: light;
+  --color-base-100: #fffbf0;
+  --color-base-200: #fef3c7;
+  --color-base-300: #fde68a;
+  --color-base-content: #1f2937;
+  --color-primary: #f59e0b;
+  --color-primary-content: #1a0e00;
+  --color-secondary: #ef4444;
+  --color-secondary-content: #ffffff;
+  --color-accent: #10b981;
+  --color-accent-content: #ffffff;
+  --color-neutral: #1f2937;
+  --color-neutral-content: #f3f4f6;
+  --color-info: #3b82f6;
+  --color-info-content: #ffffff;
+  --color-success: #22c55e;
+  --color-success-content: #003d10;
+  --color-warning: #f59e0b;
+  --color-warning-content: #1a0e00;
+  --color-error: #ef4444;
+  --color-error-content: #ffffff;
+  --radius-selector: 0.75rem;
+  --radius-field: 0.375rem;
+  --radius-box: 0.75rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+/* ── Minimal ── clean, high contrast */
+[data-theme="minimal"] {
+  color-scheme: light;
+  --color-base-100: #ffffff;
+  --color-base-200: #f5f5f5;
+  --color-base-300: #e5e5e5;
+  --color-base-content: #111111;
+  --color-primary: #111111;
+  --color-primary-content: #ffffff;
+  --color-secondary: #555555;
+  --color-secondary-content: #ffffff;
+  --color-accent: #0066cc;
+  --color-accent-content: #ffffff;
+  --color-neutral: #111111;
+  --color-neutral-content: #ffffff;
+  --color-info: #0066cc;
+  --color-info-content: #ffffff;
+  --color-success: #16a34a;
+  --color-success-content: #ffffff;
+  --color-warning: #ca8a04;
+  --color-warning-content: #111111;
+  --color-error: #dc2626;
+  --color-error-content: #ffffff;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
 }
 
 /* iOS safe area CSS variables */

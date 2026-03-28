@@ -37,12 +37,9 @@
 			festivalId={festival.id}
 			initialData={{
 				name: festival.name,
-				location: festival.location,
 				startDate: festival.startDate,
 				endDate: festival.endDate,
 				timezone: festival.timezone,
-				dayBoundaryHour: festival.dayBoundaryHour,
-				theme: festival.theme,
 				clashfinderSlug: festival.clashfinderSlug
 			}}
 		/>
