@@ -202,7 +202,7 @@
 
     <!-- Sticky search bar -->
     <div class="px-4 py-2" role="search">
-      <label class="input input-bordered input-sm flex items-center gap-2 w-full">
+      <label class="input input-sm flex items-center gap-2 w-full">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-4 text-base-content/50 flex-shrink-0" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
         </svg>

@@ -287,7 +287,7 @@
 					<div class="label"><span class="label-text">Clashfinder URL</span></div>
 					<input
 						type="url"
-						class="input input-bordered w-full"
+						class="input w-full"
 						placeholder="https://clashfinder.com/s/festival2026/"
 						bind:value={clashfinderUrl}
 					/>
@@ -335,7 +335,7 @@
 					<div class="label"><span class="label-text">Lineup file (JSON or CSV)</span></div>
 					<input
 						type="file"
-						class="file-input file-input-bordered w-full"
+						class="file-input w-full"
 						accept=".json,.csv"
 						onchange={handleFileUpload}
 					/>
@@ -388,7 +388,7 @@
 			<div class="label"><span class="label-text">Festival name *</span></div>
 			<input
 				type="text"
-				class="input input-bordered w-full"
+				class="input w-full"
 				placeholder="e.g. Glastonbury 2026"
 				bind:value={name}
 				required
@@ -398,11 +398,11 @@
 		<div class="grid grid-cols-2 gap-3">
 			<label class="form-control">
 				<div class="label"><span class="label-text">Start date *</span></div>
-				<input type="date" class="input input-bordered w-full" bind:value={startDate} required />
+				<input type="date" class="input w-full" bind:value={startDate} required />
 			</label>
 			<label class="form-control">
 				<div class="label"><span class="label-text">End date *</span></div>
-				<input type="date" class="input input-bordered w-full" bind:value={endDate} required />
+				<input type="date" class="input w-full" bind:value={endDate} required />
 			</label>
 		</div>
 
@@ -431,7 +431,7 @@
 			<div class="label"><span class="label-text">Map image (optional)</span></div>
 			<input
 				type="file"
-				class="file-input file-input-bordered w-full"
+				class="file-input w-full"
 				accept="image/*"
 				onchange={handleMapUpload}
 			/>

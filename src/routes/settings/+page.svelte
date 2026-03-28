@@ -279,7 +279,7 @@
 						<span class="label-text">Current festival</span>
 					</div>
 					<select
-						class="select select-bordered w-full"
+						class="select w-full pt-2"
 						value={settings?.activeFestivalId ?? ''}
 						onchange={handleFestivalChange}
 					>
@@ -311,7 +311,7 @@
 					</div>
 					<input
 						type="number"
-						class="input input-bordered w-full"
+						class="input w-full"
 						min="0"
 						max="12"
 						bind:value={dayBoundaryHour}
@@ -357,7 +357,7 @@
 					<span class="label-text">Default lead time</span>
 				</div>
 				<select
-					class="select select-bordered w-full"
+					class="select w-full"
 					value={settings?.notifyMinutesBefore ?? 15}
 					onchange={handleLeadTimeChange}
 					disabled={!(settings?.notificationsEnabled ?? false) || notifPermission === 'denied'}
@@ -384,7 +384,7 @@
 				</div>
 				<input
 					type="text"
-					class="input input-bordered w-full"
+					class="input w-full"
 					placeholder="your-username"
 					bind:value={cfUsername}
 					autocomplete="username"
@@ -397,7 +397,7 @@
 				</div>
 				<input
 					type="password"
-					class="input input-bordered w-full"
+					class="input w-full"
 					placeholder="••••••••"
 					bind:value={cfPrivateKey}
 					autocomplete="current-password"
@@ -469,7 +469,7 @@
 				</div>
 				<input
 					type="text"
-					class="input input-bordered w-full"
+					class="input w-full"
 					placeholder="e.g. my-festival-2026"
 					bind:value={ntfyTopic}
 					disabled={ntfySubscribed}

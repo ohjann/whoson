@@ -93,7 +93,7 @@
           <label class="mb-1 block text-sm font-medium" for="act-notes">Notes</label>
           <textarea
             id="act-notes"
-            class="textarea textarea-bordered w-full"
+            class="textarea w-full"
             rows="3"
             placeholder="Add personal notes..."
             bind:value={notes}
