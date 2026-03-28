@@ -15,7 +15,8 @@
     "test:run": "vitest run",
     "dev:cap": "node scripts/syncnetworkconfig.js && npx cap sync && npx cap open ios",
     "build:cap": "npm run build && npx cap sync",
-    "version:sync": "node scripts/sync-version.js"
+    "version:sync": "node scripts/sync-version.js",
+    "generate:assets": "npx @capacitor/assets generate"
   },
   "dependencies": {
     "@capacitor/app": "^7.0.0",
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "@capacitor/android": "^7.0.0",
+    "@capacitor/assets": "^3.0.0",
     "@capacitor/cli": "^7.0.0",
     "@capacitor/ios": "^7.0.0",
     "@sveltejs/adapter-static": "^3.0.6",
