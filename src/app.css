@@ -1,0 +1,36 @@
+@import 'tailwindcss';
+@plugin "daisyui" {
+  themes: nightrave --default, dayfestival, synthwave, minimal;
+}
+
+@theme {
+  /* Night Rave - dark, neon accents */
+  --color-nightrave-base-100: #0d0d1a;
+  --color-nightrave-base-200: #1a1a2e;
+  --color-nightrave-base-300: #16213e;
+  --color-nightrave-primary: #b14aed;
+  --color-nightrave-secondary: #ff2d78;
+  --color-nightrave-accent: #00d4ff;
+  --color-nightrave-neutral: #1a1a2e;
+  --color-nightrave-base-content: #e0e0ff;
+
+  /* Day Festival - warm, vibrant */
+  --color-dayfestival-base-100: #fffbf0;
+  --color-dayfestival-base-200: #fef3c7;
+  --color-dayfestival-base-300: #fde68a;
+  --color-dayfestival-primary: #f59e0b;
+  --color-dayfestival-secondary: #ef4444;
+  --color-dayfestival-accent: #10b981;
+  --color-dayfestival-neutral: #1f2937;
+  --color-dayfestival-base-content: #1f2937;
+
+  /* Minimal - clean, high contrast */
+  --color-minimal-base-100: #ffffff;
+  --color-minimal-base-200: #f5f5f5;
+  --color-minimal-base-300: #e5e5e5;
+  --color-minimal-primary: #111111;
+  --color-minimal-secondary: #555555;
+  --color-minimal-accent: #0066cc;
+  --color-minimal-neutral: #111111;
+  --color-minimal-base-content: #111111;
+}
