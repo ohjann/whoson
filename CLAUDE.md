@@ -33,7 +33,8 @@
 
 ```typescript
 // Bridge pattern: Dexie liveQuery Observable → Svelte 5 $state
-// Use the useLiveQuery() utility from src/lib/db/live.ts
+// Use the useLiveQuery() utility from src/lib/db/live.svelte.ts
+// IMPORTANT: Must use .svelte.ts extension so Svelte compiler transforms $state/$effect runes
 // It subscribes to a liveQuery Observable in $effect,
 // writes results to a $state variable, and cleans up on destroy.
 function useLiveQuery<T>(querier: () => Promise<T>, initialValue: T) {
