@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { parseClashfinderUrl, fetchClashfinderLineup, generateAuthKey } from './clashfinder.js';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
+import { parseClashfinderUrl, fetchClashfinderLineup, parseClashfinderHtml } from './clashfinder.js';
+
+function loadFixture(name: string): string {
+	return readFileSync(resolve(__dirname, '__fixtures__', name), 'utf-8');
+}
 
 describe('parseClashfinderUrl', () => {
 	it('extracts slug from standard URL', () => {
@@ -29,10 +35,75 @@ describe('parseClashfinderUrl', () => {
 	});
 });
 
-describe('generateAuthKey (re-exported from crypto)', () => {
-	it('returns a 64-char hex SHA-256 hash', async () => {
-		const key = await generateAuthKey('testuser', 'secret', 'event/fest.json', '9999999999');
-		expect(key).toMatch(/^[0-9a-f]{64}$/);
+describe('parseClashfinderHtml', () => {
+	const SAMPLE_HTML = `
+		<script>var cg = { festName: "Test Festival 2025", getName: "testfest" };</script>
+		<div class="days">
+		<div class="day" data-day="1751241600000" data-day-str="2025/06/30 00:00">
+		<div class="stageContainer"><div class="stageNameWrap"><p class="stageName">Main Stage</p></div>
+		<div class="actsContainer">
+		<div class="stageRow"></div>
+		<div class="act id-theban occ-1" data-short="theban" data-start="72000000" data-end="77400000" style="width: 10%;">
+			<div class="actNmWrap"><h6 class="actNm">The Band</h6></div>
+			<p class="actTime">20:00 - 21:30</p>
+		</div>
+		<div class="act id-soloa occ-1" data-short="soloa" data-start="79200000" data-end="82800000" style="width: 10%;">
+			<div class="actNmWrap"><h6 class="actNm">Solo Artist</h6></div>
+			<p class="actTime">22:00 - 23:00</p>
+		</div>
+		</div></div>
+		<div class="stageContainer"><div class="stageNameWrap"><p class="stageName">The Tent</p></div>
+		<div class="actsContainer">
+		<div class="stageRow"></div>
+		<div class="act id-djset occ-1" data-short="djset" data-start="75600000" data-end="82800000" style="width: 20%;">
+			<div class="actNmWrap"><h6 class="actNm">DJ Set</h6></div>
+			<p class="actTime">21:00 - 23:00</p>
+		</div>
+		</div></div>
+		<div class="timeLineHide"></div>
+		</div>
+		</div><!-- class="days" -->
+	`;
+
+	it('extracts festival title from cg object', () => {
+		const result = parseClashfinderHtml(SAMPLE_HTML, 'testfest');
+		expect(result.title).toBe('Test Festival 2025');
+	});
+
+	it('falls back to humanized slug when no title', () => {
+		const html = SAMPLE_HTML.replace('festName: "Test Festival 2025"', '');
+		const result = parseClashfinderHtml(html, 'my-fest-2025');
+		expect(result.title).toBe('My Fest 2025');
+	});
+
+	it('extracts all acts with correct fields', () => {
+		const result = parseClashfinderHtml(SAMPLE_HTML, 'testfest');
+		expect(result.acts).toHaveLength(3);
+		expect(result.acts[0]).toEqual({
+			name: 'The Band',
+			stage: 'Main Stage',
+			startTime: '2025-06-30T20:00',
+			endTime: '2025-06-30T21:30'
+		});
+	});
+
+	it('assigns correct stage names', () => {
+		const result = parseClashfinderHtml(SAMPLE_HTML, 'testfest');
+		expect(result.acts[0].stage).toBe('Main Stage');
+		expect(result.acts[1].stage).toBe('Main Stage');
+		expect(result.acts[2].stage).toBe('The Tent');
+	});
+
+	it('throws when no acts found', () => {
+		expect(() => parseClashfinderHtml('<html><body></body></html>', 'empty')).toThrow(
+			'No acts found'
+		);
+	});
+
+	it('decodes HTML entities in act names', () => {
+		const html = SAMPLE_HTML.replace('The Band', 'Tom &amp; Jerry');
+		const result = parseClashfinderHtml(html, 'testfest');
+		expect(result.acts[0].name).toBe('Tom & Jerry');
 	});
 });
 
@@ -45,101 +116,90 @@ describe('fetchClashfinderLineup', () => {
 		vi.unstubAllGlobals();
 	});
 
-	it('maps response fields to ClashfinderResult', async () => {
-		const mockData = {
-			title: 'Testfest 2025',
-			data: [
-				{ act: 'The Band', start: '2025-06-27T20:00', end: '2025-06-27T21:30', stage: 'Main' },
-				{ act: 'Solo Artist', start: '2025-06-27T22:00', end: '2025-06-27T23:00', stage: 'Tent' }
-			]
-		};
-		vi.mocked(fetch).mockResolvedValue(
-			new Response(JSON.stringify(mockData), { status: 200 })
-		);
+	it('fetches the HTML page without auth', async () => {
+		const html = `
+			<script>var cg = { festName: "Fest" };</script>
+			<div class="days">
+			<div class="day" data-day="1751241600000" data-day-str="2025/06/30 00:00" data-day-sz="100">
+			<div class="stageContainer"><div class="stageNameWrap"><p class="stageName">Stage</p></div>
+			<div class="actsContainer">
+			<div class="stageRow"></div>
+			<div class="act id-act1 occ-1" data-short="act1" data-start="43200000" data-end="45000000" style="width: 10%;">
+				<div class="actNmWrap"><h6 class="actNm">Act</h6></div><p class="actTime">12:00 - 12:30</p>
+			</div>
+			</div></div>
+			<div class="timeLineHide"></div>
+			</div>
+			</div><!-- class="days" -->
+		`;
+		vi.mocked(fetch).mockResolvedValue(new Response(html, { status: 200 }));
 
-		const result = await fetchClashfinderLineup('testfest', 'user', 'pubkey', 'privkey');
+		const result = await fetchClashfinderLineup('myfest');
 
-		expect(result.title).toBe('Testfest 2025');
-		expect(result.acts).toHaveLength(2);
-		expect(result.acts[0]).toEqual({
-			name: 'The Band',
-			startTime: '2025-06-27T20:00',
-			endTime: '2025-06-27T21:30',
-			stage: 'Main'
-		});
-		expect(result.acts[1]).toEqual({
-			name: 'Solo Artist',
-			startTime: '2025-06-27T22:00',
-			endTime: '2025-06-27T23:00',
-			stage: 'Tent'
-		});
+		const calledUrl = vi.mocked(fetch).mock.calls[0][0] as string;
+		expect(calledUrl).toBe('https://clashfinder.com/s/myfest/');
+		expect(calledUrl).not.toContain('auth');
+		expect(result.acts).toHaveLength(1);
 	});
 
-	it('derives title from slug when response has no title', async () => {
-		const mockData = {
-			data: [
-				{ act: 'DJ', start: '2025-06-27T20:00', end: '2025-06-27T21:00', stage: 'Main' }
-			]
-		};
-		vi.mocked(fetch).mockResolvedValue(
-			new Response(JSON.stringify(mockData), { status: 200 })
-		);
-
-		const result = await fetchClashfinderLineup('my-fest-2025', 'user', 'pubkey', 'privkey');
-		expect(result.title).toBe('My Fest 2025');
+	it('throws on 404', async () => {
+		vi.mocked(fetch).mockResolvedValue(new Response('Not Found', { status: 404 }));
+		await expect(fetchClashfinderLineup('nope')).rejects.toThrow('does not exist');
 	});
 
 	it('throws on network failure', async () => {
 		vi.mocked(fetch).mockRejectedValue(new TypeError('Failed to fetch'));
+		await expect(fetchClashfinderLineup('fest')).rejects.toThrow('Network failure');
+	});
+});
 
-		await expect(fetchClashfinderLineup('fest', 'u', 'pub', 'priv')).rejects.toThrow(
-			'Network failure'
-		);
+describe('regression: real Clashfinder pages', () => {
+	it('parses Meadowside 2026 (single day, single stage, 7 acts)', () => {
+		const html = loadFixture('meadowside26.html');
+		const result = parseClashfinderHtml(html, 'meadowside26');
+
+		expect(result.title).toBe('Meadowside Music Festival 2026');
+		expect(result.acts).toHaveLength(7);
+
+		// Spot-check first and last acts
+		expect(result.acts[0]).toEqual({
+			name: 'Community Acts',
+			stage: 'Main Stage',
+			startTime: '2026-07-11T12:00',
+			endTime: '2026-07-11T12:45'
+		});
+		expect(result.acts[6]).toEqual({
+			name: 'Doubting Thomas',
+			stage: 'Main Stage',
+			startTime: '2026-07-11T18:10',
+			endTime: '2026-07-11T19:00'
+		});
+
+		// All acts are on Main Stage
+		expect(result.acts.every(a => a.stage === 'Main Stage')).toBe(true);
 	});
 
-	it('throws descriptive error on 401', async () => {
-		vi.mocked(fetch).mockResolvedValue(new Response('Unauthorized', { status: 401 }));
+	it('parses Secret Island Festival 2026 (multi-day, multi-stage)', () => {
+		const html = loadFixture('sif2026.html');
+		const result = parseClashfinderHtml(html, 'sif2026');
 
-		await expect(fetchClashfinderLineup('fest', 'u', 'pub', 'priv')).rejects.toThrow(
-			'Authentication failed'
-		);
-	});
+		expect(result.title).toBe('Secret Island Festival 2026');
+		expect(result.acts.length).toBeGreaterThanOrEqual(11);
 
-	it('throws descriptive error on 404', async () => {
-		vi.mocked(fetch).mockResolvedValue(new Response('Not Found', { status: 404 }));
+		// Multiple stages
+		const stages = [...new Set(result.acts.map(a => a.stage))];
+		expect(stages).toContain('Main stage');
+		expect(stages).toContain('Stage 1');
+		expect(stages.length).toBeGreaterThanOrEqual(2);
 
-		await expect(fetchClashfinderLineup('fest', 'u', 'pub', 'priv')).rejects.toThrow(
-			'Festival not found'
-		);
-	});
+		// Multiple days
+		const days = [...new Set(result.acts.map(a => a.startTime.split('T')[0]))];
+		expect(days.length).toBeGreaterThanOrEqual(2);
 
-	it('throws on malformed JSON', async () => {
-		vi.mocked(fetch).mockResolvedValue(new Response('not json', { status: 200 }));
-
-		await expect(fetchClashfinderLineup('fest', 'u', 'pub', 'priv')).rejects.toThrow(
-			'Malformed response'
-		);
-	});
-
-	it('throws when data field is missing', async () => {
-		vi.mocked(fetch).mockResolvedValue(
-			new Response(JSON.stringify({ error: 'oops' }), { status: 200 })
-		);
-
-		await expect(fetchClashfinderLineup('fest', 'u', 'pub', 'priv')).rejects.toThrow(
-			'Malformed response'
-		);
-	});
-
-	it('includes authUsername and authPublicKey in request URL', async () => {
-		vi.mocked(fetch).mockResolvedValue(
-			new Response(JSON.stringify({ data: [] }), { status: 200 })
-		);
-
-		await fetchClashfinderLineup('myfest', 'myuser', 'mypubkey', 'myprivkey');
-
-		const calledUrl = vi.mocked(fetch).mock.calls[0][0] as string;
-		expect(calledUrl).toContain('authUsername=myuser');
-		expect(calledUrl).toContain('authPublicKey=mypubkey');
+		// All times should be valid ISO format
+		for (const act of result.acts) {
+			expect(act.startTime).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+			expect(act.endTime).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+		}
 	});
 });

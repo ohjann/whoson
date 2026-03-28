@@ -1,5 +1,3 @@
-import { generateAuthKey } from './crypto.js';
-
 export interface Act {
 	name: string;
 	startTime: string;
@@ -12,26 +10,10 @@ export interface ClashfinderResult {
 	acts: Act[];
 }
 
-interface ClashfinderAct {
-	act: string;
-	start: string;
-	end: string;
-	stage: string;
-}
-
-interface ClashfinderResponse {
-	title?: string;
-	data?: ClashfinderAct[];
-	[key: string]: unknown;
-}
-
-export { generateAuthKey };
-
 export function parseClashfinderUrl(url: string): string | null {
 	try {
 		const parsed = new URL(url);
 		if (!parsed.hostname.includes('clashfinder.com')) return null;
-		// Matches /s/{slug}/ or /s/{slug}
 		const match = parsed.pathname.match(/^\/s\/([^/]+)\/?$/);
 		return match ? match[1] : null;
 	} catch {
@@ -39,66 +21,121 @@ export function parseClashfinderUrl(url: string): string | null {
 	}
 }
 
-export async function fetchClashfinderLineup(
-	slug: string,
-	username: string,
-	publicKey: string,
-	privateKey: string
-): Promise<ClashfinderResult> {
-	const authValidUntil = String(Math.floor(Date.now() / 1000) + 3600);
-	const authParam = `event/${slug}.json`;
-	const authKey = await generateAuthKey(username, privateKey, authParam, authValidUntil);
-
-	const params = new URLSearchParams({
-		authUsername: username,
-		authPublicKey: publicKey,
-		authKey,
-		authValidUntil
-	});
-
-	const url = `https://clashfinder.com/data/event/${slug}.json?${params}`;
+/**
+ * Fetch and parse a Clashfinder lineup from the public HTML page.
+ * No authentication required — works for any public festival.
+ */
+export async function fetchClashfinderLineup(slug: string): Promise<ClashfinderResult> {
+	const url = `https://clashfinder.com/s/${slug}/`;
 
 	let response: Response;
 	try {
 		response = await fetch(url);
 	} catch {
-		throw new Error('Network failure: unable to reach Clashfinder API');
+		throw new Error('Network failure: unable to reach Clashfinder');
 	}
 
-	if (response.status === 401) {
-		throw new Error('Authentication failed: invalid credentials');
-	}
 	if (response.status === 404) {
-		throw new Error(`Festival not found: invalid slug "${slug}"`);
+		throw new Error(`Festival not found: "${slug}" does not exist on Clashfinder`);
 	}
 	if (!response.ok) {
-		throw new Error(`Clashfinder API error: HTTP ${response.status}`);
+		throw new Error(`Clashfinder error: HTTP ${response.status}`);
 	}
 
-	let json: ClashfinderResponse;
-	try {
-		json = await response.json();
-	} catch {
-		throw new Error('Malformed response: invalid JSON from Clashfinder API');
+	const html = await response.text();
+	return parseClashfinderHtml(html, slug);
+}
+
+/**
+ * Parse Clashfinder HTML into structured act data.
+ *
+ * Page structure (verified against real pages):
+ *   <div class="day" data-day="1783728000000" data-day-str="2026/07/11 00:00">
+ *     <div class="stageContainer">
+ *       <p class="stageName">Main Stage</p>
+ *       <div class="actsContainer">
+ *         <div class="act ..." data-start="43200000" data-end="45900000">
+ *           <h6 class="actNm">Artist Name</h6>
+ *           <p class="actTime">12:00 - 12:45</p>
+ *         </div>
+ *       </div>
+ *     </div>
+ *   </div>
+ *
+ * data-day:   unix ms timestamp of the day (midnight UTC)
+ * data-start: ms from midnight for act start
+ * data-end:   ms from midnight for act end
+ */
+export function parseClashfinderHtml(html: string, slug: string): ClashfinderResult {
+	// Extract festival title from JS config
+	const titleMatch = html.match(/festName:\s*"([^"]+)"/);
+	const title = titleMatch?.[1] ?? humanizeSlug(slug);
+
+	const acts: Act[] = [];
+
+	// Parse each day block
+	const dayRegex = /<div\s+class="day"[^>]*data-day="(\d+)"[^>]*>([\s\S]*?)(?=<div\s+class="day"|<\/div>\s*<!--\s*class="days"\s*-->)/g;
+	let dayMatch;
+	while ((dayMatch = dayRegex.exec(html)) !== null) {
+		const dayTimestamp = Number(dayMatch[1]);
+		const dayHtml = dayMatch[2];
+
+		// Parse each stage container within the day
+		const stageRegex = /<p\s+class="stageName">([^<]+)<\/p>([\s\S]*?)(?=<div\s+class="stageContainer"|<div\s+class="timeLineHide"|$)/g;
+		let stageMatch;
+		while ((stageMatch = stageRegex.exec(dayHtml)) !== null) {
+			const stageName = stageMatch[1].trim();
+			const stageHtml = stageMatch[2];
+
+			// Parse each act within the stage
+			const actRegex = /data-start="(\d+)"\s+data-end="(\d+)"[^>]*>[\s\S]*?<h6\s+class="actNm">([^<]+)<\/h6>/g;
+			let actMatch;
+			while ((actMatch = actRegex.exec(stageHtml)) !== null) {
+				const startMs = Number(actMatch[1]);
+				const endMs = Number(actMatch[2]);
+				const actName = decodeHtmlEntities(actMatch[3].trim());
+
+				const startTime = msToLocalIso(dayTimestamp, startMs);
+				const endTime = msToLocalIso(dayTimestamp, endMs);
+
+				acts.push({ name: actName, stage: stageName, startTime, endTime });
+			}
+		}
 	}
 
-	const acts = json.data;
-	if (!Array.isArray(acts)) {
-		throw new Error('Malformed response: expected data array in Clashfinder response');
+	if (acts.length === 0) {
+		throw new Error(
+			'No acts found on the Clashfinder page. The lineup may not be published yet.'
+		);
 	}
 
-	// Derive title from response, falling back to a humanized slug
-	const title = typeof json.title === 'string' && json.title.trim()
-		? json.title.trim()
-		: slug.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+	return { title, acts };
+}
 
-	return {
-		title,
-		acts: acts.map((item) => ({
-			name: item.act,
-			startTime: item.start,
-			endTime: item.end,
-			stage: item.stage
-		}))
-	};
+/**
+ * Convert a day timestamp (unix ms, midnight) + offset from midnight (ms)
+ * into a local ISO datetime string like "2026-07-11T14:30".
+ */
+function msToLocalIso(dayTimestampMs: number, offsetMs: number): string {
+	const d = new Date(dayTimestampMs + offsetMs);
+	const year = d.getUTCFullYear();
+	const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+	const day = String(d.getUTCDate()).padStart(2, '0');
+	const hours = String(d.getUTCHours()).padStart(2, '0');
+	const minutes = String(d.getUTCMinutes()).padStart(2, '0');
+	return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function decodeHtmlEntities(s: string): string {
+	return s
+		.replace(/&amp;/g, '&')
+		.replace(/&lt;/g, '<')
+		.replace(/&gt;/g, '>')
+		.replace(/&quot;/g, '"')
+		.replace(/&#39;/g, "'")
+		.replace(/&#x27;/g, "'");
+}
+
+function humanizeSlug(slug: string): string {
+	return slug.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }

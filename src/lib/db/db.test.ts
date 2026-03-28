@@ -115,12 +115,12 @@ describe('WhosOnDB', () => {
 
   it('can store app settings', async () => {
     const settings: AppSettings = {
-      clashfinderUsername: 'testuser',
-      notificationsEnabled: true
+      notificationsEnabled: true,
+      notifyMinutesBefore: 15
     };
     const id = (await db.settings.add(settings)) as number;
     const retrieved = await db.settings.get(id);
-    expect(retrieved?.clashfinderUsername).toBe('testuser');
     expect(retrieved?.notificationsEnabled).toBe(true);
+    expect(retrieved?.notifyMinutesBefore).toBe(15);
   });
 });

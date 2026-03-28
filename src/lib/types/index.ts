@@ -52,12 +52,7 @@ export interface FestivalMap {
 
 export interface AppSettings {
   id?: number;
-  clashfinderUsername?: string;
-  // Note: private key is NOT stored in plaintext — use AB-004 credential encryption
-  encryptedPrivateKey?: string;
-  defaultFestivalId?: number;
   activeFestivalId?: number;
   notificationsEnabled: boolean;
   notifyMinutesBefore?: number; // default lead time for notifications (minutes)
-  ntfyTopic?: string;
 }

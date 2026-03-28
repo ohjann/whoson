@@ -9,7 +9,6 @@
 	} from '$lib/features/festival/operations';
 	import { parseClashfinderUrl, fetchClashfinderLineup } from '$lib/features/import/clashfinder';
 	import { parseJsonLineup, parseCsvLineup } from '$lib/features/import/manual';
-	import { getDecryptedPrivateKey } from '$lib/features/settings/operations';
 
 	// --- Props ---
 	let {
@@ -45,18 +44,7 @@
 	);
 	let importError = $state('');
 	let importErrors = $state<string[]>([]);
-	let isNative = $state(false);
 	let isFetching = $state(false);
-
-	$effect(() => {
-		import('@capacitor/core')
-			.then(({ Capacitor }) => {
-				isNative = Capacitor.isNativePlatform();
-			})
-			.catch(() => {
-				isNative = false;
-			});
-	});
 
 	const clashfinderSlug = $derived(parseClashfinderUrl(clashfinderUrl));
 
@@ -92,14 +80,7 @@
 		parsedActs = [];
 
 		try {
-			const settings = await db.settings.toCollection().first();
-			const username = settings?.clashfinderUsername ?? '';
-			const privateKey = await getDecryptedPrivateKey() ?? '';
-			if (!username || !privateKey) {
-				throw new Error('Clashfinder credentials not set. Add them in Settings first.');
-			}
-
-			const result = await fetchClashfinderLineup(clashfinderSlug, username, username, privateKey);
+			const result = await fetchClashfinderLineup(clashfinderSlug);
 
 			parsedActs = result.acts.map((a) => ({
 				name: a.name,
@@ -271,18 +252,6 @@
 		<!-- Clashfinder URL input -->
 		{#if importType === 'clashfinder'}
 			<div class="space-y-3">
-				{#if !isNative}
-					<div class="alert alert-warning">
-						<svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-							<path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
-						</svg>
-						<span class="text-sm">
-							Clashfinder import requires the mobile app due to browser CORS restrictions.
-							The URL will be saved and you can sync the lineup from the app.
-						</span>
-					</div>
-				{/if}
-
 				<label class="form-control w-full">
 					<div class="label"><span class="label-text">Clashfinder URL</span></div>
 					<input
@@ -291,27 +260,24 @@
 						placeholder="https://clashfinder.com/s/festival2026/"
 						bind:value={clashfinderUrl}
 					/>
+					<div class="label">
+						<span class="label-text-alt text-base-content/50">Paste the URL from your browser when viewing the lineup on clashfinder.com</span>
+					</div>
 				</label>
 
 				{#if clashfinderUrl && !clashfinderSlug}
-					<div class="text-sm text-error">Not a valid Clashfinder URL</div>
-				{:else if clashfinderSlug}
-					<div class="text-sm text-success">
-						<span>Ready to import: <code>{clashfinderSlug}</code></span>
-					</div>
-
-					{#if isNative && !parsedActs.length}
-						<button
-							class="btn btn-primary btn-sm"
-							onclick={handleClashfinderFetch}
-							disabled={isFetching}
-						>
-							{#if isFetching}
-								<span class="loading loading-spinner loading-xs"></span>
-							{/if}
-							Fetch Lineup
-						</button>
-					{/if}
+					<div class="text-sm text-error">Not a valid Clashfinder URL — should look like clashfinder.com/s/your-festival/</div>
+				{:else if clashfinderSlug && !parsedActs.length}
+					<button
+						class="btn btn-primary btn-sm"
+						onclick={handleClashfinderFetch}
+						disabled={isFetching}
+					>
+						{#if isFetching}
+							<span class="loading loading-spinner loading-xs"></span>
+						{/if}
+						Fetch Lineup
+					</button>
 				{/if}
 
 				{#if parsedActs.length > 0}

@@ -227,7 +227,7 @@ describe('duplicate slug handling', () => {
 describe('refreshLineup', () => {
   it('throws if festival has no clashfinderSlug', async () => {
     const festivalId = await createFestival(makeFestivalData());
-    await expect(refreshLineup(festivalId, 'user', 'pubkey', 'privkey')).rejects.toThrow(
+    await expect(refreshLineup(festivalId)).rejects.toThrow(
       'Festival has no Clashfinder slug configured'
     );
   });

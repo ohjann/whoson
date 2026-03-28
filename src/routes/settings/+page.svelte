@@ -3,8 +3,6 @@
 	import { db } from '$lib/db';
 	import {
 		updateSettings,
-		saveClashfinderCredentials,
-		getDecryptedPrivateKey,
 		clearAllData
 	} from '$lib/features/settings/operations';
 	import { setActiveFestival, updateFestival } from '$lib/features/festival/operations';
@@ -51,59 +49,6 @@
 			notifPermission = Notification.permission;
 		}
 	});
-
-	// --- Clashfinder ---
-	let cfUsername = $state('');
-	let cfPrivateKey = $state('');
-	let cfRemember = $state(false);
-	let cfSaving = $state(false);
-	let cfLoaded = $state(false);
-	let cfSyncing = $state(false);
-	let cfSyncError = $state('');
-
-	// Load stored username and decrypt private key on mount
-	$effect(() => {
-		const s = settings;
-		if (s && !cfLoaded) {
-			cfLoaded = true;
-			cfUsername = s.clashfinderUsername ?? '';
-			cfRemember = !!s.encryptedPrivateKey;
-			if (s.encryptedPrivateKey) {
-				getDecryptedPrivateKey().then((key) => {
-					if (key) cfPrivateKey = key;
-				});
-			}
-		}
-	});
-
-	async function handleSaveClashfinder() {
-		cfSaving = true;
-		try {
-			await saveClashfinderCredentials(cfUsername.trim(), cfPrivateKey, cfRemember);
-			addToast({ title: 'Saved', message: 'Clashfinder credentials saved.' });
-		} catch {
-			addToast({ title: 'Error', message: 'Failed to save credentials.' });
-		} finally {
-			cfSaving = false;
-		}
-	}
-
-	async function handleSyncClashfinder() {
-		cfSyncError = '';
-		cfSyncing = true;
-		try {
-			const { refreshLineup } = await import('$lib/features/festival/operations');
-			if (!activeFestival?.id) throw new Error('No active festival');
-			if (!activeFestival.clashfinderSlug) throw new Error('Festival has no Clashfinder URL configured');
-			const publicKey = cfUsername.trim();
-			await refreshLineup(activeFestival.id, cfUsername.trim(), publicKey, cfPrivateKey);
-			addToast({ title: 'Synced', message: 'Lineup updated from Clashfinder.' });
-		} catch (e) {
-			cfSyncError = e instanceof Error ? e.message : 'Failed to sync from Clashfinder';
-		} finally {
-			cfSyncing = false;
-		}
-	}
 
 	// --- Theme & Display ---
 	const activeFestival = $derived(
@@ -322,90 +267,6 @@
 					{/each}
 				</select>
 			</label>
-		</div>
-	</section>
-
-	<!-- Clashfinder Credentials -->
-	<section class="card bg-base-200 shadow-sm">
-		<div class="card-body gap-3">
-			<h2 class="card-title text-lg">Clashfinder Credentials</h2>
-			<p class="text-sm text-base-content/70">
-				Enter your Clashfinder username and private key to import private lineups.
-			</p>
-
-			<label class="form-control">
-				<div class="label">
-					<span class="label-text">Username</span>
-				</div>
-				<input
-					type="text"
-					class="input w-full"
-					placeholder="your-username"
-					bind:value={cfUsername}
-					autocomplete="username"
-				/>
-			</label>
-
-			<label class="form-control">
-				<div class="label">
-					<span class="label-text">Private key</span>
-				</div>
-				<input
-					type="password"
-					class="input w-full"
-					placeholder="••••••••"
-					bind:value={cfPrivateKey}
-					autocomplete="current-password"
-				/>
-			</label>
-
-			<label class="flex items-center gap-3 cursor-pointer">
-				<input type="checkbox" class="checkbox checkbox-primary" bind:checked={cfRemember} />
-				<span class="label-text">Remember private key (encrypted on device)</span>
-			</label>
-
-			<div class="flex gap-2 flex-wrap">
-				<button
-					class="btn btn-primary btn-sm"
-					onclick={handleSaveClashfinder}
-					disabled={cfSaving || !cfUsername.trim()}
-				>
-					{#if cfSaving}
-						<span class="loading loading-spinner loading-xs"></span>
-					{/if}
-					Save Credentials
-				</button>
-
-				<button
-					class="btn btn-outline btn-sm"
-					onclick={handleSyncClashfinder}
-					disabled={cfSyncing || !cfUsername.trim() || !cfPrivateKey.trim()}
-				>
-					{#if cfSyncing}
-						<span class="loading loading-spinner loading-xs"></span>
-					{/if}
-					Sync Lineup
-				</button>
-			</div>
-
-			{#if cfSyncError}
-				<div class="alert alert-error text-sm">
-					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5 shrink-0" aria-hidden="true">
-						<path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM8.28 7.22a.75.75 0 0 0-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 1 0 1.06 1.06L10 11.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L11.06 10l1.72-1.72a.75.75 0 0 0-1.06-1.06L10 8.94 8.28 7.22Z" clip-rule="evenodd" />
-					</svg>
-					<div>
-						<p>{cfSyncError}</p>
-						<div class="flex gap-2 mt-2">
-							<button type="button" class="btn btn-sm btn-outline" onclick={handleSyncClashfinder}>
-								Retry
-							</button>
-							<a href="/festivals/new/" class="btn btn-sm btn-ghost">
-								Import manually instead
-							</a>
-						</div>
-					</div>
-				</div>
-			{/if}
 		</div>
 	</section>
 

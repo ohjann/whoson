@@ -59,22 +59,12 @@ export async function importLineup(
   });
 }
 
-export async function refreshLineup(
-  festivalId: number,
-  username: string,
-  publicKey: string,
-  privateKey: string
-): Promise<void> {
+export async function refreshLineup(festivalId: number): Promise<void> {
   const festival = await db.festivals.get(festivalId);
   if (!festival?.clashfinderSlug) {
     throw new Error('Festival has no Clashfinder slug configured');
   }
-  const result = await fetchClashfinderLineup(
-    festival.clashfinderSlug,
-    username,
-    publicKey,
-    privateKey
-  );
+  const result = await fetchClashfinderLineup(festival.clashfinderSlug);
   await importLineup(festivalId, result.acts);
 }
 
