@@ -1,15 +1,18 @@
 <script lang="ts">
   import type { Act, ActPriority, UserHighlight } from '$lib/types';
   import PriorityPicker from './PriorityPicker.svelte';
+  import ClashWarning from '$lib/features/schedule/ClashWarning.svelte';
   import { updateHighlightNotes, updateHighlightPriority } from './operations';
 
   let {
     act,
     highlight,
+    clashingWith = [],
     onclose
   }: {
     act: Act;
     highlight: UserHighlight | undefined;
+    clashingWith?: Act[];
     onclose?: () => void;
   } = $props();
 
@@ -69,6 +72,14 @@
 
     {#if act.description}
       <p class="mb-4 text-sm">{act.description}</p>
+    {/if}
+
+    {#if clashingWith.length > 0}
+      <div class="mb-4 space-y-2">
+        {#each clashingWith as other (other.id)}
+          <ClashWarning actA={act} actB={other} />
+        {/each}
+      </div>
     {/if}
 
     {#if highlight}

@@ -12,6 +12,7 @@
 
 ## Svelte 5 Rules — MANDATORY
 - Use ONLY Svelte 5 runes: $state, $derived, $effect, $props, $bindable
+- Utility files that use runes MUST use `.svelte.ts` extension (not plain `.ts`) — otherwise runes are not compiled and `$state is not defined` at runtime
 - NO Svelte 4 patterns: no `export let`, no `$:` reactive statements, no `<slot />`
 - Use `{@render children()}` instead of `<slot />`
 - Use `let { prop1, prop2 } = $props()` instead of `export let`
