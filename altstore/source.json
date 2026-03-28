@@ -1,0 +1,21 @@
+{
+  "name": "WhosOn",
+  "identifier": "com.whoson.app",
+  "sourceURL": "https://raw.githubusercontent.com/OWNER/whoson/main/altstore/source.json",
+  "apps": [
+    {
+      "name": "WhosOn",
+      "bundleIdentifier": "com.whoson.app",
+      "developerName": "WhosOn",
+      "subtitle": "Festival schedule companion",
+      "version": "0.0.1",
+      "versionDate": "2026-03-28",
+      "versionDescription": "Initial release",
+      "downloadURL": "https://github.com/OWNER/whoson/releases/download/v0.0.1/WhosOn.ipa",
+      "localizedDescription": "WhosOn is a festival schedule companion app that helps you plan your festival experience.",
+      "iconURL": "",
+      "size": 0,
+      "minOSVersion": "16.0"
+    }
+  ]
+}

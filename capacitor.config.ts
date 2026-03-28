@@ -3,7 +3,8 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'com.whoson.app',
   appName: 'WhosOn',
-  webDir: 'build'
+  webDir: 'build',
+  appVersion: '0.0.1'
 };
 
 export default config;

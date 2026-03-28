@@ -1,0 +1,192 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  build-ios:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Extract version from tag
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+
+      - name: Set package version
+        run: npm version ${{ env.VERSION }} --no-git-tag-version
+
+      - name: Build web
+        run: npm run build
+
+      - name: Run version sync
+        run: npm run version:sync
+
+      - name: Add iOS platform
+        run: npx cap add ios 2>/dev/null || true
+
+      - name: Sync Capacitor (copies web + updates native version)
+        run: npx cap sync ios
+
+      - name: Sync version to iOS project
+        run: npm run version:sync
+
+      - name: Install CocoaPods dependencies
+        run: |
+          cd ios/App
+          pod install
+
+      - name: Build iOS archive
+        run: |
+          cd ios/App
+          xcodebuild archive \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -destination "generic/platform=iOS" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Create unsigned IPA
+        run: |
+          mkdir Payload
+          cp -r "$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app" Payload/
+          zip -r WhosOn.ipa Payload/
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa
+          path: WhosOn.ipa
+
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Extract version from tag
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+
+      - name: Set package version
+        run: npm version ${{ env.VERSION }} --no-git-tag-version
+
+      - name: Build web
+        run: npm run build
+
+      - name: Run version sync
+        run: npm run version:sync
+
+      - name: Add Android platform
+        run: npx cap add android 2>/dev/null || true
+
+      - name: Sync Capacitor (copies web + updates native version)
+        run: npx cap sync android
+
+      - name: Sync version to Android project
+        run: npm run version:sync
+
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease
+
+      - name: Locate and copy APK
+        run: |
+          APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
+          cp "$APK" WhosOn.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: WhosOn.apk
+
+  release:
+    needs: [build-ios, build-android]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Extract version from tag
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+
+      - name: Set package version
+        run: npm version ${{ env.VERSION }} --no-git-tag-version
+
+      - name: Download IPA artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-ipa
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: android-apk
+
+      - name: Get IPA size in bytes
+        run: echo "IPA_SIZE=$(stat -c%s WhosOn.ipa)" >> $GITHUB_ENV
+
+      - name: Sync altstore/source.json with version, URL, and size
+        run: npm run version:sync
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          IPA_SIZE: ${{ env.IPA_SIZE }}
+
+      - name: Commit updated altstore/source.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add altstore/source.json
+          git commit -m "chore: update altstore source for v${{ env.VERSION }}" || echo "No changes to commit"
+          git push
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            WhosOn.ipa
+            WhosOn.apk
+          generate_release_notes: true
