@@ -23,6 +23,7 @@
 	// Nav items (AB-016)
 	const navItems = [
 		{ href: '/', label: 'Home', icon: 'home' },
+		{ href: '/now/', label: 'Now', icon: 'now' },
 		{ href: '/schedule/', label: 'Schedule', icon: 'schedule' },
 		{ href: '/map/', label: 'Map', icon: 'map' },
 		{ href: '/settings/', label: 'Settings', icon: 'settings' }
