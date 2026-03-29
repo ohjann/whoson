@@ -21,18 +21,20 @@ An offline-first festival schedule companion for iOS and Android. Browse artist 
 
 ## Installation
 
-### iOS — AltStore
+### iOS — AltStore Classic
 
-WhosOn is distributed via AltStore, a sideloading tool that does not require a jailbreak.
+WhosOn is distributed via [AltStore Classic](https://altstore.io), a sideloading tool that uses AltServer on your Mac or PC. **AltStore PAL (EU marketplace) is not supported** — it requires Apple notarization.
 
-1. Install [AltStore](https://altstore.io) on your Mac or PC and on your iOS device (iPhone or iPad running iOS 16+).
-2. Open AltStore on your iOS device and go to **Browse**.
-3. Tap the **+** button and enter the source URL:
+1. Install [AltServer](https://altstore.io) on your Mac or PC, then install AltStore Classic on your iOS device (iPhone or iPad running iOS 16+).
+2. Open AltStore on your iOS device and go to **Browse** → **Sources**.
+3. Tap **Add Source** and enter the URL:
    ```
    https://raw.githubusercontent.com/ohjann/whoson/main/altstore/source.json
    ```
 4. The WhosOn source will appear — tap **Get** to install.
 5. You will need to refresh the app in AltStore every 7 days (or use AltStore+ for automatic refresh).
+
+Alternatively, you can build and install directly from Xcode — see [Building from Source](#building-from-source).
 
 ### Android — APK
 
