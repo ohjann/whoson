@@ -1,6 +1,6 @@
 import { db } from '$lib/db';
 import { liveQuery } from 'dexie';
-import type { ActPriority, UserHighlight } from '$lib/types';
+import type { UserHighlight } from '$lib/types';
 import { cancelActNotification, checkPermission, scheduleActNotification } from '$lib/features/notifications/local';
 
 export async function toggleHighlight(
@@ -48,10 +48,10 @@ export function getHighlightsForFestival(festivalId: number) {
   );
 }
 
-export async function updateHighlightPriority(
+export async function updateClashRank(
   festivalId: number,
   actId: number,
-  priority: ActPriority
+  clashRank: number
 ): Promise<void> {
   const existing = await db.highlights
     .where('[festivalId+actId]')
@@ -59,7 +59,7 @@ export async function updateHighlightPriority(
     .first();
 
   if (existing?.id != null) {
-    await db.highlights.update(existing.id, { priority });
+    await db.highlights.update(existing.id, { clashRank });
   }
 }
 

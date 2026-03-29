@@ -3,11 +3,12 @@
   import { liveQuery } from 'dexie';
   import { db } from '$lib/db';
   import { toggleHighlight } from '$lib/features/highlights/operations';
-  import { groupActsByDate, findOverlaps, searchActs } from '$lib/features/schedule/utils';
+  import { groupActsByDate, findOverlaps, groupClashes, searchActs } from '$lib/features/schedule/utils';
   import DayTabs from '$lib/features/schedule/DayTabs.svelte';
   import TimeSlot from '$lib/features/schedule/TimeSlot.svelte';
   import ActCard from '$lib/features/schedule/ActCard.svelte';
   import ActDetailSheet from '$lib/features/schedule/ActDetailSheet.svelte';
+  import ClashResolver from '$lib/features/schedule/ClashResolver.svelte';
   import VirtualList from '$lib/components/ui/VirtualList.svelte';
   import type { Act, Festival, HiddenAct, UserHighlight } from '$lib/types';
 
@@ -79,6 +80,7 @@
   const hiddenActIds = $derived(new Set(hiddenActsValue.map((h) => h.actId)));
 
   let showHidden = $state(false);
+  let showClashResolver = $state(false);
   let selectedDay = $state<string | null>(null);
   let searchQuery = $state('');
   let selectedAct = $state<Act | undefined>(undefined);
@@ -134,6 +136,8 @@
   const currentDayClashes = $derived(
     selectedDay ? (clashesPerDay.get(selectedDay) ?? []) : []
   );
+
+  const currentDayClashGroups = $derived(groupClashes(currentDayClashes));
 
   // Acts for the selected day, filtered by search and hidden status
   const currentDayActs = $derived.by(() => {
@@ -287,6 +291,22 @@
     {/if}
   </header>
 
+  {#if currentDayClashGroups.length > 0}
+    <div class="px-4 pb-2">
+      <button
+        type="button"
+        class="flex w-full items-center justify-between gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm"
+        onclick={() => { showClashResolver = true; }}
+      >
+        <span class="flex items-center gap-2">
+          <span class="text-warning">&#9888;</span>
+          <span>{currentDayClashes.length} {currentDayClashes.length === 1 ? 'clash' : 'clashes'}</span>
+        </span>
+        <span class="text-xs font-medium text-primary">Resolve</span>
+      </button>
+    </div>
+  {/if}
+
   <!-- Content -->
   <main class="flex-1 pb-4">
     {#if !activeFestival}
@@ -352,5 +372,14 @@
     isHidden={selectedAct.id != null && hiddenActIds.has(selectedAct.id)}
     clashingWith={getClashingActsFor(selectedAct)}
     onclose={closeSheet}
+  />
+{/if}
+
+<!-- Clash resolver -->
+{#if showClashResolver}
+  <ClashResolver
+    clashGroups={currentDayClashGroups}
+    {highlightMap}
+    onclose={() => { showClashResolver = false; }}
   />
 {/if}

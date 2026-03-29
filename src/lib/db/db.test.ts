@@ -85,14 +85,13 @@ describe('WhosOnDB', () => {
     const highlight: UserHighlight = {
       festivalId,
       actId,
-      priority: 1,
       createdAt: new Date().toISOString()
     };
     await db.highlights.add(highlight);
 
     const found = await db.highlights.where('[festivalId+actId]').equals([festivalId, actId]).toArray();
     expect(found).toHaveLength(1);
-    expect(found[0].priority).toBe(1);
+    expect(found[0].festivalId).toBe(festivalId);
   });
 
   it('can store a festivalMap separately from festival', async () => {

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Act, ActPriority, UserHighlight } from '$lib/types';
+  import type { Act, UserHighlight } from '$lib/types';
   import { cn } from '$lib/utils';
 
   let {
@@ -19,24 +19,6 @@
   } = $props();
 
   const isHighlighted = $derived(highlight !== undefined);
-
-  const priorityLabel: Record<ActPriority, string> = {
-    1: 'Must see',
-    2: 'Nice to see',
-    3: 'If nothing else'
-  };
-
-  const priorityIcon: Record<ActPriority, string> = {
-    1: '🔥',
-    2: '👍',
-    3: '🤷'
-  };
-
-  const priorityClass: Record<ActPriority, string> = {
-    1: 'badge-warning',
-    2: 'badge-success',
-    3: 'badge-info'
-  };
 </script>
 
 <article
@@ -89,14 +71,6 @@
   <div class="flex flex-shrink-0 items-center gap-1" aria-hidden="true">
     {#if isClashing}
       <span class="badge badge-warning badge-sm">⚠</span>
-    {/if}
-    {#if highlight?.priority}
-      <span
-        class={cn('badge badge-sm', priorityClass[highlight.priority])}
-        title={priorityLabel[highlight.priority]}
-      >
-        {priorityIcon[highlight.priority]}
-      </span>
     {/if}
   </div>
 </article>

@@ -1,8 +1,7 @@
 <script lang="ts">
-  import type { Act, ActPriority, UserHighlight } from '$lib/types';
-  import PriorityPicker from '$lib/features/highlights/PriorityPicker.svelte';
+  import type { Act, UserHighlight } from '$lib/types';
   import ClashWarning from './ClashWarning.svelte';
-  import { toggleHighlight, updateHighlightPriority, updateHighlightNotes } from '$lib/features/highlights/operations';
+  import { toggleHighlight, updateHighlightNotes } from '$lib/features/highlights/operations';
   import { toggleHidden } from '$lib/features/schedule/hidden';
   import {
     scheduleActNotification,
@@ -29,13 +28,11 @@
   const isHighlighted = $derived(highlight !== undefined);
 
   let notes = $state('');
-  let priority = $state<ActPriority | undefined>(undefined);
   let notifyEnabled = $state(false);
   let notifyMinutes = $state(DEFAULT_NOTIFY_MINUTES_BEFORE);
 
   $effect(() => {
     notes = highlight?.notes ?? '';
-    priority = highlight?.priority;
     notifyEnabled = highlight?.notifyMinutesBefore != null;
     notifyMinutes = highlight?.notifyMinutesBefore ?? DEFAULT_NOTIFY_MINUTES_BEFORE;
   });
@@ -51,11 +48,6 @@
     if (act.id == null) return;
     await toggleHidden(act.festivalId, act.id);
     if (!isHidden) onclose?.();
-  }
-
-  async function handlePriorityChange(p: ActPriority) {
-    if (!act.id || !act.festivalId) return;
-    await updateHighlightPriority(act.festivalId, act.id, p);
   }
 
   async function handleNotesBlur() {
@@ -194,12 +186,6 @@
 
       {#if isHighlighted}
         <div class="space-y-4">
-          <!-- Priority -->
-          <div>
-            <p class="mb-1 text-sm font-medium">Priority</p>
-            <PriorityPicker bind:priority onchange={handlePriorityChange} />
-          </div>
-
           <!-- Notes -->
           <div>
             <label class="mb-1 block text-sm font-medium" for="sheet-act-notes">Notes</label>

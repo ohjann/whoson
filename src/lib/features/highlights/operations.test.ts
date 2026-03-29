@@ -6,7 +6,7 @@ import {
   toggleHighlight,
   isHighlighted,
   getHighlightsForFestival,
-  updateHighlightPriority,
+  updateClashRank,
   updateHighlightNotes
 } from './operations';
 
@@ -58,26 +58,24 @@ describe('isHighlighted', () => {
   });
 });
 
-describe('updateHighlightPriority', () => {
-  it('sets priority on an existing highlight', async () => {
+describe('updateClashRank', () => {
+  it('sets clashRank on an existing highlight', async () => {
     await toggleHighlight(1, 10);
-    await updateHighlightPriority(1, 10, 1);
+    await updateClashRank(1, 10, 1);
     const h = await db.highlights.where('[festivalId+actId]').equals([1, 10]).first();
-    expect(h?.priority).toBe(1);
+    expect(h?.clashRank).toBe(1);
   });
 
-  it('can update priority to each level', async () => {
+  it('can update clashRank', async () => {
     await toggleHighlight(1, 10);
-    for (const p of [1, 2, 3] as const) {
-      await updateHighlightPriority(1, 10, p);
-      const h = await db.highlights.where('[festivalId+actId]').equals([1, 10]).first();
-      expect(h?.priority).toBe(p);
-    }
+    await updateClashRank(1, 10, 3);
+    await updateClashRank(1, 10, 1);
+    const h = await db.highlights.where('[festivalId+actId]').equals([1, 10]).first();
+    expect(h?.clashRank).toBe(1);
   });
 
   it('does nothing if highlight does not exist', async () => {
-    // Should not throw
-    await expect(updateHighlightPriority(1, 99, 1)).resolves.not.toThrow();
+    await expect(updateClashRank(1, 99, 1)).resolves.not.toThrow();
   });
 });
 

@@ -84,12 +84,22 @@
     return act.id != null && highlightMap.has(`${act.festivalId}:${act.id}`);
   }
 
-  // Now/Next
+  function getClashRank(act: Act): number {
+    if (act.id == null) return Infinity;
+    const h = highlightMap.get(`${act.festivalId}:${act.id}`);
+    return h?.clashRank ?? Infinity;
+  }
+
+  // Now/Next — sort by: highlighted first, then by clashRank (lower = preferred)
   const now = $derived(getNow());
   const playingNow = $derived(
     activeFestival
       ? getPlayingNow(actsQuery.value ?? [], now, activeFestival)
-          .toSorted((a, b) => Number(isHighlighted(b)) - Number(isHighlighted(a)))
+          .toSorted((a, b) => {
+            const hlDiff = Number(isHighlighted(b)) - Number(isHighlighted(a));
+            if (hlDiff !== 0) return hlDiff;
+            return getClashRank(a) - getClashRank(b);
+          })
       : []
   );
   const upNext = $derived(
@@ -97,7 +107,9 @@
       ? getUpNext(actsQuery.value ?? [], now, 60, activeFestival)
           .toSorted((a, b) => {
             if (a.startTime !== b.startTime) return 0;
-            return Number(isHighlighted(b)) - Number(isHighlighted(a));
+            const hlDiff = Number(isHighlighted(b)) - Number(isHighlighted(a));
+            if (hlDiff !== 0) return hlDiff;
+            return getClashRank(a) - getClashRank(b);
           })
       : []
   );

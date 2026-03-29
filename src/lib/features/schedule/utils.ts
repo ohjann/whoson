@@ -115,6 +115,49 @@ export function getUpNext(
 }
 
 /**
+ * Groups overlapping acts into transitive clash groups.
+ * If A clashes with B and B clashes with C, all three are in one group.
+ */
+export function groupClashes(pairs: Array<[Act, Act]>): Act[][] {
+	const parent = new Map<number, number>();
+
+	function find(id: number): number {
+		if (!parent.has(id)) parent.set(id, id);
+		if (parent.get(id) !== id) parent.set(id, find(parent.get(id)!));
+		return parent.get(id)!;
+	}
+
+	function union(a: number, b: number) {
+		const ra = find(a);
+		const rb = find(b);
+		if (ra !== rb) parent.set(ra, rb);
+	}
+
+	const actMap = new Map<number, Act>();
+	for (const [a, b] of pairs) {
+		if (a.id != null && b.id != null) {
+			actMap.set(a.id, a);
+			actMap.set(b.id, b);
+			union(a.id, b.id);
+		}
+	}
+
+	const groups = new Map<number, Act[]>();
+	for (const [id, act] of actMap) {
+		const root = find(id);
+		if (!groups.has(root)) groups.set(root, []);
+		groups.get(root)!.push(act);
+	}
+
+	// Sort each group by start time
+	for (const group of groups.values()) {
+		group.sort((a, b) => a.startTime.localeCompare(b.startTime));
+	}
+
+	return Array.from(groups.values());
+}
+
+/**
  * Filters acts to those that have a corresponding UserHighlight entry.
  */
 export function getHighlightedActs(acts: Act[], highlights: UserHighlight[]): Act[] {

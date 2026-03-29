@@ -7,7 +7,6 @@ export interface ExportHighlight {
   stage: string;
   startTime: string;
   endTime: string;
-  priority?: number;
   notes?: string;
 }
 
@@ -51,7 +50,6 @@ export function exportHighlightsAsJson(
       stage: act.stage,
       startTime: act.startTime,
       endTime: act.endTime,
-      priority: highlight.priority,
       notes: highlight.notes
     })),
     exportedAt: new Date().toISOString()
@@ -102,7 +100,6 @@ export function exportHighlightsAsIcal(
       `LOCATION:${location}`
     ];
     if (description) lines.push(`DESCRIPTION:${description}`);
-    if (highlight.priority) lines.push(`PRIORITY:${highlight.priority}`);
     lines.push('END:VEVENT');
     return lines.join('\r\n');
   });
@@ -145,8 +142,7 @@ export async function copyShareableText(
     lines.push(`=== ${day} ===`);
     for (const { act, highlight } of dayItems) {
       const time = act.startTime.slice(11, 16);
-      const priority = highlight.priority ? ` [${'★'.repeat(highlight.priority)}]` : '';
-      lines.push(`${time} ${act.name} @ ${act.stage}${priority}`);
+      lines.push(`${time} ${act.name} @ ${act.stage}`);
       if (highlight.notes) lines.push(`  Note: ${highlight.notes}`);
     }
     lines.push('');

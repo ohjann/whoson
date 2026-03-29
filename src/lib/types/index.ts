@@ -1,5 +1,3 @@
-export type ActPriority = 1 | 2 | 3;
-
 export interface FestivalTheme {
   preset?: 'night-rave' | 'day-festival' | 'synthwave' | 'minimal';
   primary?: string;
@@ -37,7 +35,7 @@ export interface UserHighlight {
   id?: number;
   festivalId: number;
   actId: number;
-  priority?: ActPriority;
+  clashRank?: number;
   notes?: string;
   createdAt: string;
   notifyMinutesBefore?: number; // minutes before act start to notify (0 = at start)

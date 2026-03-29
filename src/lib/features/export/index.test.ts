@@ -37,7 +37,6 @@ const highlights: UserHighlight[] = [
     id: 1,
     festivalId: 1,
     actId: 1,
-    priority: 1,
     notes: 'Must see!',
     createdAt: '2024-01-01T00:00:00.000Z'
   },
@@ -45,7 +44,6 @@ const highlights: UserHighlight[] = [
     id: 2,
     festivalId: 1,
     actId: 2,
-    priority: 2,
     createdAt: '2024-01-01T00:00:00.000Z'
   }
 ];
@@ -61,7 +59,7 @@ describe('exportHighlightsAsJson', () => {
     expect(data.exportedAt).toBeDefined();
   });
 
-  it('includes priority, notes, stage, and times', () => {
+  it('includes notes, stage, and times', () => {
     const json = exportHighlightsAsJson(festival, highlights, acts);
     const data = JSON.parse(json);
 
@@ -70,7 +68,6 @@ describe('exportHighlightsAsJson', () => {
     expect(first.stage).toBe('Main Stage');
     expect(first.startTime).toBe('2024-06-28T21:00:00');
     expect(first.endTime).toBe('2024-06-28T22:30:00');
-    expect(first.priority).toBe(1);
     expect(first.notes).toBe('Must see!');
   });
 
