@@ -357,7 +357,7 @@
 					<span class="label-text">Default lead time</span>
 				</div>
 				<select
-					class="select w-full"
+					class="select w-full pt-2"
 					value={settings?.notifyMinutesBefore ?? 15}
 					onchange={handleLeadTimeChange}
 					disabled={!(settings?.notificationsEnabled ?? false) || notifPermission === 'denied'}
