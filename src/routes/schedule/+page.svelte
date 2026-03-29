@@ -123,11 +123,13 @@
     return result;
   });
 
-  // Clash count badges for day tabs
+  // Clash count badges for day tabs (only unresolved)
   const clashCounts = $derived.by(() => {
     const counts = new Map<string, number>();
     for (const [day, clashes] of clashesPerDay) {
-      if (clashes.length > 0) counts.set(day, clashes.length);
+      const groups = groupClashes(clashes);
+      const unresolved = groups.filter((g) => !isClashResolved(g)).length;
+      if (unresolved > 0) counts.set(day, unresolved);
     }
     return counts;
   });
@@ -138,6 +140,29 @@
   );
 
   const currentDayClashGroups = $derived(groupClashes(currentDayClashes));
+
+  // A clash group is "resolved" when every act in it has a clashRank set
+  function isClashResolved(group: Act[]): boolean {
+    return group.every((a) => {
+      if (a.id == null) return false;
+      const h = highlightMap.get(a.id);
+      return h?.clashRank != null;
+    });
+  }
+
+  const unresolvedClashCount = $derived(
+    currentDayClashGroups.filter((g) => !isClashResolved(g)).length
+  );
+
+  const resolvedClashActIds = $derived(
+    new Set(
+      currentDayClashGroups
+        .filter((g) => isClashResolved(g))
+        .flat()
+        .map((a) => a.id)
+        .filter((id): id is number => id != null)
+    )
+  );
 
   // Acts for the selected day, filtered by search and hidden status
   const currentDayActs = $derived.by(() => {
@@ -173,6 +198,7 @@
     act: Act;
     highlight: UserHighlight | undefined;
     isClashing: boolean;
+    clashResolved: boolean;
     isHidden: boolean;
     height: number;
   };
@@ -191,6 +217,7 @@
           act,
           highlight: act.id != null ? highlightMap.get(act.id) : undefined,
           isClashing: currentDayClashes.some(([a, b]) => a.id === act.id || b.id === act.id),
+          clashResolved: act.id != null && resolvedClashActIds.has(act.id),
           isHidden: act.id != null && hiddenActIds.has(act.id),
           height: act.genre ? 96 : 80
         });
@@ -291,7 +318,7 @@
     {/if}
   </header>
 
-  {#if currentDayClashGroups.length > 0}
+  {#if unresolvedClashCount > 0}
     <div class="px-4 pb-2">
       <button
         type="button"
@@ -300,7 +327,7 @@
       >
         <span class="flex items-center gap-2">
           <span class="text-warning">&#9888;</span>
-          <span>{currentDayClashes.length} {currentDayClashes.length === 1 ? 'clash' : 'clashes'}</span>
+          <span>{unresolvedClashCount} unresolved {unresolvedClashCount === 1 ? 'clash' : 'clashes'}</span>
         </span>
         <span class="text-xs font-medium text-primary">Resolve</span>
       </button>
@@ -353,6 +380,7 @@
               act={actItem.act}
               highlight={actItem.highlight}
               isClashing={actItem.isClashing}
+              clashResolved={actItem.clashResolved}
               isHidden={actItem.isHidden}
               onToggle={handleToggle}
               onClick={openSheet}

@@ -6,6 +6,7 @@
     act,
     highlight,
     isClashing = false,
+    clashResolved = false,
     isHidden = false,
     onToggle,
     onClick
@@ -13,6 +14,7 @@
     act: Act;
     highlight: UserHighlight | undefined;
     isClashing?: boolean;
+    clashResolved?: boolean;
     isHidden?: boolean;
     onToggle: (act: Act) => void;
     onClick: (act: Act) => void;
@@ -75,8 +77,10 @@
     tabindex="-1"
     onclick={() => onClick(act)}
   >
-    {#if isClashing}
+    {#if isClashing && !clashResolved}
       <span class="badge badge-warning badge-sm">⚠</span>
+    {:else if isClashing && clashResolved}
+      <span class="badge badge-ghost badge-sm text-base-content/30">⚠</span>
     {/if}
   </button>
 </article>
