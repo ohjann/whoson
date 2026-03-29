@@ -65,16 +65,31 @@
     (h: UserHighlight) => h.festivalId === activeFestival?.id
   ).length);
 
+  const highlightMap = $derived(
+    new Map(
+      (highlightsQuery.value ?? []).map((h: UserHighlight) => [`${h.festivalId}:${h.actId}`, h])
+    )
+  );
+
+  function isHighlighted(act: Act): boolean {
+    return act.id != null && highlightMap.has(`${act.festivalId}:${act.id}`);
+  }
+
   // Now/Next
   const now = $derived(getNow());
   const playingNow = $derived(
     activeFestival
       ? getPlayingNow(actsQuery.value ?? [], now, activeFestival)
+          .toSorted((a, b) => Number(isHighlighted(b)) - Number(isHighlighted(a)))
       : []
   );
   const upNext = $derived(
     activeFestival
       ? getUpNext(actsQuery.value ?? [], now, 60, activeFestival)
+          .toSorted((a, b) => {
+            if (a.startTime !== b.startTime) return 0;
+            return Number(isHighlighted(b)) - Number(isHighlighted(a));
+          })
       : []
   );
 
@@ -115,12 +130,6 @@
 
   // Export / share
   let exportMenuOpen = $state(false);
-
-  const highlightMap = $derived(
-    new Map(
-      (highlightsQuery.value ?? []).map((h: UserHighlight) => [`${h.festivalId}:${h.actId}`, h])
-    )
-  );
 
   const highlightedActs = $derived((actsQuery.value ?? []).filter(
     (a: Act) => a.id != null && highlightMap.has(`${a.festivalId}:${a.id}`)
