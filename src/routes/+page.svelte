@@ -5,7 +5,7 @@
   import { exportHighlightsAsJson, exportHighlightsAsIcal, copyShareableText } from '$lib/features/export';
   import Welcome from '$lib/features/onboarding/Welcome.svelte';
   import { getNow } from '$lib/debug/time.svelte';
-  import type { Act, Festival, UserHighlight } from '$lib/types';
+  import type { Act, Festival, HiddenAct, UserHighlight } from '$lib/types';
 
   const ONBOARDING_DISMISSED_KEY = 'whoson_onboarding_dismissed';
   let onboardingDismissed = $state(
@@ -29,6 +29,7 @@
   const festivalsQuery = useLiveQuery(() => db.festivals.toArray(), [] as Festival[]);
   const settingsQuery = useLiveQuery(() => db.settings.toCollection().first(), undefined);
   const highlightsQuery = useLiveQuery(() => db.highlights.toArray(), []);
+  const hiddenActsQuery = useLiveQuery(() => db.hiddenActs.toArray(), [] as HiddenAct[]);
 
   const activeFestivalId = $derived(settingsQuery.value?.activeFestivalId ?? null);
 
@@ -41,8 +42,13 @@
 
   // Load all acts and filter reactively (querier must not depend on reactive vars)
   const allActsQuery = useLiveQuery(() => db.acts.toArray(), [] as Act[]);
+  const hiddenActIds = $derived(
+    new Set((hiddenActsQuery.value ?? []).map((h: HiddenAct) => h.actId))
+  );
   const actsQuery = $derived({
-    value: (allActsQuery.value ?? []).filter((a: Act) => a.festivalId === activeFestival?.id)
+    value: (allActsQuery.value ?? []).filter(
+      (a: Act) => a.festivalId === activeFestival?.id && (a.id == null || !hiddenActIds.has(a.id))
+    )
   });
 
   // Festival date boundary

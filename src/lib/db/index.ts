@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
-import type { Act, AppSettings, Festival, FestivalMap, UserHighlight } from '$lib/types';
+import type { Act, AppSettings, Festival, FestivalMap, HiddenAct, UserHighlight } from '$lib/types';
 
 export class WhosOnDB extends Dexie {
   festivals!: EntityTable<Festival, 'id'>;
@@ -7,6 +7,7 @@ export class WhosOnDB extends Dexie {
   highlights!: EntityTable<UserHighlight, 'id'>;
   settings!: EntityTable<AppSettings, 'id'>;
   festivalMaps!: EntityTable<FestivalMap, 'festivalId'>;
+  hiddenActs!: EntityTable<HiddenAct, 'id'>;
 
   constructor() {
     super('whoson');
@@ -16,6 +17,9 @@ export class WhosOnDB extends Dexie {
       highlights: '++id, festivalId, actId, [festivalId+actId]',
       settings: '++id',
       festivalMaps: 'festivalId'
+    });
+    this.version(2).stores({
+      hiddenActs: '++id, festivalId, actId, [festivalId+actId]'
     });
   }
 }

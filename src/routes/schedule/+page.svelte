@@ -9,7 +9,7 @@
   import ActCard from '$lib/features/schedule/ActCard.svelte';
   import ActDetailSheet from '$lib/features/schedule/ActDetailSheet.svelte';
   import VirtualList from '$lib/components/ui/VirtualList.svelte';
-  import type { Act, Festival, UserHighlight } from '$lib/types';
+  import type { Act, Festival, HiddenAct, UserHighlight } from '$lib/types';
 
   const settingsQuery = useLiveQuery(() => db.settings.toCollection().first(), undefined);
   const festivalsQuery = useLiveQuery(() => db.festivals.toArray(), [] as Festival[]);
@@ -60,6 +60,25 @@
   });
   const highlightsQuery = { get value() { return highlightsValue; } };
 
+  // Hidden acts — same pattern
+  let hiddenActsValue = $state<HiddenAct[]>([]);
+  $effect(() => {
+    const festId = activeFestivalId;
+    const sub = liveQuery(
+      () =>
+        festId != null
+          ? db.hiddenActs.where('festivalId').equals(festId).toArray()
+          : Promise.resolve([] as HiddenAct[])
+    ).subscribe({
+      next: (v) => { hiddenActsValue = v as HiddenAct[]; },
+      error: (err) => console.error('hiddenActs liveQuery error:', err)
+    });
+    return () => sub.unsubscribe();
+  });
+
+  const hiddenActIds = $derived(new Set(hiddenActsValue.map((h) => h.actId)));
+
+  let showHidden = $state(false);
   let selectedDay = $state<string | null>(null);
   let searchQuery = $state('');
   let selectedAct = $state<Act | undefined>(undefined);
@@ -110,10 +129,18 @@
     selectedDay ? (clashesPerDay.get(selectedDay) ?? []) : []
   );
 
-  // Acts for the selected day, filtered by search
+  // Acts for the selected day, filtered by search and hidden status
   const currentDayActs = $derived.by(() => {
-    const dayActs = selectedDay ? (dayGroups.get(selectedDay) ?? []) : [];
+    let dayActs = selectedDay ? (dayGroups.get(selectedDay) ?? []) : [];
+    if (!showHidden) {
+      dayActs = dayActs.filter((a) => a.id == null || !hiddenActIds.has(a.id));
+    }
     return searchQuery.trim() ? searchActs(dayActs, searchQuery) : dayActs;
+  });
+
+  const hiddenCountForDay = $derived.by(() => {
+    const dayActs = selectedDay ? (dayGroups.get(selectedDay) ?? []) : [];
+    return dayActs.filter((a) => a.id != null && hiddenActIds.has(a.id)).length;
   });
 
   // Group current day acts by time slot (HH:MM of startTime)
@@ -136,6 +163,7 @@
     act: Act;
     highlight: UserHighlight | undefined;
     isClashing: boolean;
+    isHidden: boolean;
     height: number;
   };
   type FlatItem = SlotItem | ActItem;
@@ -153,6 +181,7 @@
           act,
           highlight: act.id != null ? highlightMap.get(act.id) : undefined,
           isClashing: currentDayClashes.some(([a, b]) => a.id === act.id || b.id === act.id),
+          isHidden: act.id != null && hiddenActIds.has(act.id),
           height: act.genre ? 96 : 80
         });
       }
@@ -227,6 +256,29 @@
         {/if}
       </label>
     </div>
+
+    {#if hiddenCountForDay > 0}
+      <div class="flex items-center justify-end px-4 pb-2">
+        <button
+          type="button"
+          class="btn btn-ghost btn-xs gap-1 text-base-content/50"
+          onclick={() => { showHidden = !showHidden; }}
+          aria-pressed={showHidden}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-3.5">
+            {#if showHidden}
+              <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+              <path fill-rule="evenodd" d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 0 1 0-1.113ZM17.25 12a5.25 5.25 0 1 1-10.5 0 5.25 5.25 0 0 1 10.5 0Z" clip-rule="evenodd" />
+            {:else}
+              <path d="M3.53 2.47a.75.75 0 0 0-1.06 1.06l18 18a.75.75 0 1 0 1.06-1.06l-18-18ZM22.676 12.553a11.249 11.249 0 0 1-2.631 4.31l-3.099-3.099a5.25 5.25 0 0 0-6.71-6.71L7.759 4.577a11.217 11.217 0 0 1 4.242-.827c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113Z" />
+              <path d="M15.75 12c0 .18-.013.357-.037.53l-4.244-4.243A3.75 3.75 0 0 1 15.75 12ZM12.53 15.713l-4.243-4.244a3.75 3.75 0 0 0 4.244 4.243Z" />
+              <path d="M6.75 12c0-.619.107-1.213.304-1.764l-3.1-3.1a11.25 11.25 0 0 0-2.63 4.31c-.12.362-.12.752 0 1.114 1.489 4.467 5.704 7.69 10.675 7.69 1.5 0 2.933-.294 4.242-.827l-2.477-2.477A5.25 5.25 0 0 1 6.75 12Z" />
+            {/if}
+          </svg>
+          {showHidden ? 'Hide' : 'Show'} {hiddenCountForDay} hidden
+        </button>
+      </div>
+    {/if}
   </header>
 
   <!-- Content -->
@@ -275,6 +327,7 @@
               act={actItem.act}
               highlight={actItem.highlight}
               isClashing={actItem.isClashing}
+              isHidden={actItem.isHidden}
               onToggle={handleToggle}
               onClick={openSheet}
             />
@@ -290,6 +343,7 @@
   <ActDetailSheet
     act={selectedAct}
     highlight={selectedAct.id != null ? highlightMap.get(selectedAct.id) : undefined}
+    isHidden={selectedAct.id != null && hiddenActIds.has(selectedAct.id)}
     clashingWith={getClashingActsFor(selectedAct)}
     onclose={closeSheet}
   />

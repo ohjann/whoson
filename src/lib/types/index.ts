@@ -44,6 +44,13 @@ export interface UserHighlight {
   notificationId?: number; // Capacitor local notification ID
 }
 
+export interface HiddenAct {
+  id?: number;
+  festivalId: number;
+  actId: number;
+  createdAt: string;
+}
+
 export interface FestivalMap {
   festivalId: number; // primary key
   imageBlob: Blob;

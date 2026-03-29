@@ -6,12 +6,14 @@
     act,
     highlight,
     isClashing = false,
+    isHidden = false,
     onToggle,
     onClick
   }: {
     act: Act;
     highlight: UserHighlight | undefined;
     isClashing?: boolean;
+    isHidden?: boolean;
     onToggle: (act: Act) => void;
     onClick: (act: Act) => void;
   } = $props();
@@ -40,9 +42,10 @@
 <article
   class={cn(
     'mx-4 mb-2 flex items-center gap-3 rounded-lg p-3 transition-colors',
+    isHidden ? 'opacity-40' : '',
     isHighlighted ? 'bg-primary/10 border border-primary/30' : 'bg-base-200'
   )}
-  aria-label="{act.name}{isHighlighted ? ', highlighted' : ''}{isClashing ? ', has time clash' : ''}"
+  aria-label="{act.name}{isHighlighted ? ', highlighted' : ''}{isHidden ? ', hidden' : ''}{isClashing ? ', has time clash' : ''}"
 >
   <!-- Highlight toggle: min 44×44px touch target -->
   <button
