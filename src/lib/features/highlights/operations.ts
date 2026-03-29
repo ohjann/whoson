@@ -5,8 +5,7 @@ import { cancelActNotification, checkPermission, scheduleActNotification } from 
 
 export async function toggleHighlight(
   festivalId: number,
-  actId: number,
-  notifyMinutesBefore?: number
+  actId: number
 ): Promise<void> {
   const existing = await db.highlights
     .where('[festivalId+actId]')
@@ -23,12 +22,14 @@ export async function toggleHighlight(
       createdAt: new Date().toISOString()
     });
 
-    // Schedule notification if permission granted and notifyMinutesBefore provided
-    if (notifyMinutesBefore != null && (await checkPermission())) {
+    // Auto-schedule notification using global default lead time
+    const settings = await db.settings.toCollection().first();
+    if (settings?.notificationsEnabled && (await checkPermission())) {
+      const leadTime = settings.notifyMinutesBefore ?? 15;
       const highlight = await db.highlights.get(id as number);
       const act = await db.acts.get(actId);
       if (highlight && act) {
-        await scheduleActNotification(highlight, act, notifyMinutesBefore);
+        await scheduleActNotification(highlight, act, leadTime);
       }
     }
   }
