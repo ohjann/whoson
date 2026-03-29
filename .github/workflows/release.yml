@@ -39,6 +39,9 @@ jobs:
       - name: Add iOS platform
         run: pnpm cap add ios 2>/dev/null || true
 
+      - name: Generate app icons and splash screens
+        run: pnpm dlx @capacitor/assets generate --iconBackgroundColor '#0d0d1a' --splashBackgroundColor '#0d0d1a'
+
       - name: Sync Capacitor (copies web + updates native version)
         run: pnpm cap sync ios
 
@@ -111,6 +114,9 @@ jobs:
 
       - name: Add Android platform
         run: pnpm cap add android 2>/dev/null || true
+
+      - name: Generate app icons and splash screens
+        run: pnpm dlx @capacitor/assets generate --iconBackgroundColor '#0d0d1a' --splashBackgroundColor '#0d0d1a'
 
       - name: Sync Capacitor (copies web + updates native version)
         run: pnpm cap sync android
