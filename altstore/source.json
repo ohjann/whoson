@@ -1,6 +1,6 @@
 {
-  "name": "WhosOn",
-  "identifier": "com.whoson.app",
+  "name": "ohjann",
+  "identifier": "com.ohjann.source",
   "sourceURL": "https://raw.githubusercontent.com/ohjann/whoson/main/altstore/source.json",
   "apps": [
     {
