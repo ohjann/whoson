@@ -14,33 +14,11 @@
 
 	let objectUrl = $state<string | undefined>(undefined);
 	let prevBlob: Blob | undefined;
-	let isFullscreen = $state(false);
-	let containerEl = $state<HTMLDivElement | undefined>(undefined);
 	let imgEl = $state<HTMLImageElement | undefined>(undefined);
 	let panzoomInstance: ReturnType<typeof Panzoom> | undefined;
 
-	async function toggleFullscreen() {
-		if (!containerEl) return;
-		if (!document.fullscreenElement) {
-			await containerEl.requestFullscreen();
-			isFullscreen = true;
-		} else {
-			await document.exitFullscreen();
-			isFullscreen = false;
-		}
-	}
-
-	$effect(() => {
-		function onFullscreenChange() {
-			isFullscreen = !!document.fullscreenElement;
-		}
-		document.addEventListener('fullscreenchange', onFullscreenChange);
-		return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
-	});
-
 	$effect(() => {
 		const blob = mapQuery.value?.imageBlob;
-		// Only update if the blob actually changed
 		if (blob === prevBlob) return;
 		prevBlob = blob;
 
@@ -88,40 +66,23 @@
 	<div class="mb-4 flex items-center justify-between">
 		<h1 class="text-xl font-bold">Map</h1>
 		{#if objectUrl}
-			<div class="flex gap-1">
-				<button
-					type="button"
-					class="btn btn-ghost btn-sm"
-					aria-label="Reset zoom"
-					onclick={resetZoom}
-				>
-					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-5">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-					</svg>
-				</button>
-				<button
-					type="button"
-					class="btn btn-ghost btn-sm"
-					aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-					onclick={toggleFullscreen}
-				>
-					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-5">
-						{#if isFullscreen}
-							<path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
-						{:else}
-							<path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
-						{/if}
-					</svg>
-				</button>
-			</div>
+			<button
+				type="button"
+				class="btn btn-ghost btn-sm"
+				aria-label="Reset zoom"
+				onclick={resetZoom}
+			>
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-5">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+				</svg>
+			</button>
 		{/if}
 	</div>
 
 	{#if objectUrl}
 		<div
-			bind:this={containerEl}
 			class="overflow-hidden rounded-lg bg-base-200 touch-none"
-			style="max-height: calc(100dvh - 12rem);"
+			style="max-height: calc(100dvh - 10rem);"
 		>
 			<img
 				bind:this={imgEl}
