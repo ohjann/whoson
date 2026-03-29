@@ -18,9 +18,10 @@ SvelteKit 2 + Svelte 5, Tailwind CSS 4, daisyUI 5, Capacitor 7, Dexie.js (Indexe
 **Capacitor** — adapter-static fallback is `200.html` (not `404.html`).
 
 ## Build
-- `npm run dev` / `npm run build` / `npm run check`
-- `npm run dev:cap` — Capacitor live reload
+- `pnpm dev` / `pnpm build` / `pnpm check`
+- `pnpm dev:cap` — Capacitor live reload
 - This is a `jj` repo — do not use raw git commands
+- Package manager is **pnpm** (not npm/yarn)
 
 ## Debug Mode
 Tap "version 0.0.1" in Settings 5x. Provides demo festival seeder and time travel slider.
