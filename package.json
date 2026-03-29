@@ -7,6 +7,9 @@
     "node": ">=20"
   },
   "packageManager": "pnpm@10.32.1",
+  "pnpm": {
+    "onlyBuiltDependencies": ["sharp", "esbuild"]
+  },
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
@@ -17,7 +20,7 @@
     "dev:cap": "node scripts/syncnetworkconfig.js && pnpm cap sync && pnpm cap open ios",
     "build:cap": "pnpm build && pnpm cap sync",
     "version:sync": "node scripts/sync-version.js",
-    "generate:assets": "pnpm @capacitor/assets generate"
+    "generate:assets": "capacitor-assets generate"
   },
   "dependencies": {
     "@capacitor/app": "^7.0.0",
