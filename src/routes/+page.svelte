@@ -2,7 +2,7 @@
   import { useLiveQuery } from '$lib/db/live.svelte';
   import { db } from '$lib/db';
   import { getPlayingNow, getUpNext } from '$lib/features/schedule/utils';
-  import { exportHighlightsAsJson, exportHighlightsAsIcal, copyShareableText } from '$lib/features/export';
+  import { exportHighlightsAsIcal, copyShareableText } from '$lib/features/export';
   import Welcome from '$lib/features/onboarding/Welcome.svelte';
   import { getNow } from '$lib/debug/time.svelte';
   import type { Act, Festival, HiddenAct, UserHighlight } from '$lib/types';
@@ -156,13 +156,6 @@
     URL.revokeObjectURL(url);
   }
 
-  function handleExportJson() {
-    if (!activeFestival) return;
-    const json = exportHighlightsAsJson(activeFestival, highlightsForExport, highlightedActs);
-    downloadFile(json, 'highlights.json', 'application/json');
-    exportMenuOpen = false;
-  }
-
   function handleExportIcal() {
     if (!activeFestival) return;
     const ical = exportHighlightsAsIcal(activeFestival, highlightsForExport, highlightedActs);
@@ -219,11 +212,6 @@
               <button
                 type="button"
                 class="flex w-full items-center gap-2 rounded-t-lg px-4 py-2 text-sm hover:bg-base-300"
-                onclick={handleExportJson}
-              >Export as JSON</button>
-              <button
-                type="button"
-                class="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-base-300"
                 onclick={handleExportIcal}
               >Export as iCal (.ics)</button>
               <button
