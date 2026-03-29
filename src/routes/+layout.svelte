@@ -6,7 +6,7 @@
 	import { applyFestivalTheme } from '$lib/features/theme/index.js';
 	import { liveQuery } from 'dexie';
 	import { syncFestivalLineup, shouldSync } from '$lib/features/sync/clashfinder-sync';
-	import { setSyncing, setLastSyncResult } from '$lib/features/sync/sync-state.svelte';
+	import { getSyncing, setSyncing, setLastSyncResult } from '$lib/features/sync/sync-state.svelte';
 	import { addToast } from '$lib/features/notifications/toasts.svelte.js';
 	import Toasts from '$lib/features/notifications/Toasts.svelte';
 
@@ -28,6 +28,7 @@
 	// Auto-sync Clashfinder on app foreground
 	$effect(() => {
 		async function checkSync() {
+			if (getSyncing()) return;
 			const settings = await db.settings.toCollection().first();
 			if (!settings?.activeFestivalId) return;
 			const festival = await db.festivals.get(settings.activeFestivalId);

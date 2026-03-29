@@ -13,7 +13,7 @@
 <div class="rounded-lg border border-warning bg-warning/10 p-3">
   <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-warning">Time clash</p>
   <div class="space-y-2">
-    {#each [actA, actB] as act (act.id)}
+    {#each [actA, actB] as act (act.id ?? act.name)}
       <div class="flex items-center gap-2">
         <div class="min-w-0 flex-1">
           <p class="truncate text-sm font-medium">{act.name}</p>

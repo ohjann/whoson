@@ -107,7 +107,7 @@
     activeFestival
       ? getUpNext(actsQuery.value ?? [], now, 60, activeFestival)
           .toSorted((a, b) => {
-            if (a.startTime !== b.startTime) return 0;
+            if (a.startTime !== b.startTime) return a.startTime.localeCompare(b.startTime);
             const hlDiff = Number(isHighlighted(b)) - Number(isHighlighted(a));
             if (hlDiff !== 0) return hlDiff;
             return getClashRank(a) - getClashRank(b);

@@ -34,11 +34,16 @@
   let notes = $state('');
   let notifyEnabled = $state(false);
   let notifyMinutes = $state(DEFAULT_NOTIFY_MINUTES_BEFORE);
+  let lastActId: number | undefined;
 
   $effect(() => {
-    notes = highlight?.notes ?? '';
-    notifyEnabled = highlight?.notifyMinutesBefore != null;
-    notifyMinutes = highlight?.notifyMinutesBefore ?? DEFAULT_NOTIFY_MINUTES_BEFORE;
+    // Only sync state from highlight when opening a different act
+    if (act.id !== lastActId) {
+      lastActId = act.id;
+      notes = highlight?.notes ?? '';
+      notifyEnabled = highlight?.notifyMinutesBefore != null;
+      notifyMinutes = highlight?.notifyMinutesBefore ?? DEFAULT_NOTIFY_MINUTES_BEFORE;
+    }
   });
 
   const leadTimeOptions = [0, 5, 10, 15, 30, 60];

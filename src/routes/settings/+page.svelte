@@ -97,12 +97,12 @@
 		festivals.find((f) => f.id === settings?.activeFestivalId) ?? festivals[0]
 	);
 	let dayBoundaryHour = $state(6);
-	let dayBoundaryLoaded = $state(false);
+	let lastFestivalId: number | undefined;
 
 	$effect(() => {
 		const f = activeFestival;
-		if (f && !dayBoundaryLoaded) {
-			dayBoundaryLoaded = true;
+		if (f && f.id !== lastFestivalId) {
+			lastFestivalId = f.id;
 			dayBoundaryHour = f.dayBoundaryHour ?? 6;
 		}
 	});

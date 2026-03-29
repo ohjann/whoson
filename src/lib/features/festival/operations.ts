@@ -25,9 +25,10 @@ export async function updateFestival(
 }
 
 export async function deleteFestival(id: number): Promise<void> {
-  await db.transaction('rw', [db.festivals, db.acts, db.highlights, db.festivalMaps], async () => {
+  await db.transaction('rw', [db.festivals, db.acts, db.highlights, db.hiddenActs, db.festivalMaps], async () => {
     await db.acts.where('festivalId').equals(id).delete();
     await db.highlights.where('festivalId').equals(id).delete();
+    await db.hiddenActs.where('festivalId').equals(id).delete();
     await db.festivalMaps.delete(id);
     await db.festivals.delete(id);
   });

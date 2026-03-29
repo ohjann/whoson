@@ -20,11 +20,12 @@ export async function updateSettings(patch: Partial<Omit<AppSettings, 'id'>>): P
 export async function clearAllData(): Promise<void> {
   await db.transaction(
     'rw',
-    [db.festivals, db.acts, db.highlights, db.settings, db.festivalMaps],
+    [db.festivals, db.acts, db.highlights, db.hiddenActs, db.settings, db.festivalMaps],
     async () => {
       await db.festivals.clear();
       await db.acts.clear();
       await db.highlights.clear();
+      await db.hiddenActs.clear();
       await db.settings.clear();
       await db.festivalMaps.clear();
     }
