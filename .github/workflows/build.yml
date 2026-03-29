@@ -13,22 +13,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: rm package-lock.json && npm install
+        run: pnpm install --frozen-lockfile
 
       - name: Sync SvelteKit
-        run: npx svelte-kit sync
+        run: pnpm svelte-kit sync
 
       - name: Typecheck
-        run: npm run check
+        run: pnpm run check
 
       - name: Test
-        run: npm run test:run
+        run: pnpm run test:run
 
       - name: Build
-        run: npm run build
+        run: pnpm run build
