@@ -24,4 +24,4 @@ SvelteKit 2 + Svelte 5, Tailwind CSS 4, daisyUI 5, Capacitor 7, Dexie.js (Indexe
 - Package manager is **pnpm** (not npm/yarn)
 
 ## Debug Mode
-Tap "version 0.0.1" in Settings 5x. Provides demo festival seeder and time travel slider.
+Tap the version string in Settings 5x. Provides demo festival seeder and time travel slider.

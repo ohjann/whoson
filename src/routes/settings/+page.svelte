@@ -432,7 +432,7 @@
 				class="text-sm text-left"
 				onclick={handleVersionTap}
 			>
-				<span class="font-semibold">WhosOn</span> — version 0.0.1
+				<span class="font-semibold">WhosOn</span> — version {__APP_VERSION__}
 			</button>
 			<p class="text-sm text-base-content/70">Festival schedule companion app.</p>
 			<div class="flex flex-col gap-1 text-sm">
