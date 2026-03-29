@@ -254,11 +254,13 @@
 				</label>
 
 				{#if activeFestival?.clashfinderSlug || activeFestival?.icalUrl}
-					<!-- Print Advisory -->
-					{#if activeFestival.printAdvisoryLabel}
-						{@const level = activeFestival.printAdvisoryLevel ?? 0}
+					<!-- Lineup Confidence -->
+					{#if activeFestival.printAdvisoryLevel}
+						{@const level = activeFestival.printAdvisoryLevel}
+						{@const confidence = level <= 2 ? 'High' : level === 3 ? 'Medium' : 'Low'}
 						<div class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm {level >= 4 ? 'bg-error/10 text-error' : level >= 3 ? 'bg-warning/10 text-warning' : 'bg-success/10 text-success'}">
-							<span class="font-medium">{activeFestival.printAdvisoryLabel}</span>
+							<span class="font-medium">Lineup confidence: {confidence}</span>
+							<span class="text-xs opacity-60">— {level >= 3 ? 'likely to change' : 'mostly final'}</span>
 						</div>
 					{/if}
 

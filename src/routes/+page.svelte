@@ -254,7 +254,7 @@
 
     <!-- Print advisory warning -->
     {#if festival.printAdvisoryLevel && festival.printAdvisoryLevel >= 4}
-      <p class="mb-3 text-xs text-warning">Schedule may change — {festival.printAdvisoryLabel}</p>
+      <p class="mb-3 text-xs text-warning">Schedule may change — lineup confidence is low</p>
     {/if}
 
     <!-- Sync change banner -->
