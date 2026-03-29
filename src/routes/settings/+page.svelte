@@ -38,7 +38,20 @@
 
 	async function handleLeadTimeChange(e: Event) {
 		const select = e.target as HTMLSelectElement;
-		await updateSettings({ notifyMinutesBefore: Number(select.value) });
+		const mins = Number(select.value);
+		await updateSettings({ notifyMinutesBefore: mins });
+
+		// Update all existing highlights and reschedule notifications
+		const allHighlights = await db.highlights
+			.filter((h) => h.notifyMinutesBefore != null)
+			.toArray();
+		for (const h of allHighlights) {
+			if (h.id != null) {
+				await db.highlights.update(h.id, { notifyMinutesBefore: mins });
+			}
+		}
+		const { rescheduleAllNotifications } = await import('$lib/features/notifications/local');
+		await rescheduleAllNotifications();
 	}
 
 	// --- Notifications ---
