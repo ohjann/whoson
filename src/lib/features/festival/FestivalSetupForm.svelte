@@ -8,6 +8,7 @@
 		importLineup
 	} from '$lib/features/festival/operations';
 	import { parseClashfinderUrl, fetchClashfinderLineup } from '$lib/features/import/clashfinder';
+	import { parseIcal, fetchIcalFeed } from '$lib/features/import/ical';
 
 	// --- Props ---
 	let {
@@ -30,9 +31,10 @@
 	const deviceTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 	// --- Step 1: Import Source ---
-	let importType = $state<'clashfinder' | 'skip'>(
+	let importType = $state<'clashfinder' | 'ical' | 'skip'>(
 		initialData?.clashfinderSlug ? 'clashfinder' : 'skip'
 	);
+	let icalUrl = $state('');
 	let clashfinderUrl = $state(
 		initialData?.clashfinderSlug
 			? `https://clashfinder.com/s/${initialData.clashfinderSlug}/`
@@ -91,20 +93,56 @@
 			if (result.title && !name) {
 				name = result.title;
 			}
-
-			// Derive date range from act times
-			if (result.acts.length > 0) {
-				const starts = result.acts.map((a) => a.startTime).sort();
-				const ends = result.acts.map((a) => a.endTime).sort();
-				const derivedStart = starts[0].split('T')[0];
-				const derivedEnd = ends[ends.length - 1].split('T')[0];
-				if (!startDate) startDate = derivedStart;
-				if (!endDate) endDate = derivedEnd;
-			}
+			prefillDatesFromActs();
 		} catch (e) {
 			importError = e instanceof Error ? e.message : 'Failed to fetch from Clashfinder';
 		} finally {
 			isFetching = false;
+		}
+	}
+
+	// --- iCal handlers ---
+	async function handleIcalFetch() {
+		if (!icalUrl) return;
+		isFetching = true;
+		importError = '';
+		parsedActs = [];
+
+		try {
+			const result = await fetchIcalFeed(icalUrl);
+			parsedActs = result.acts;
+			if (result.title && !name) name = result.title;
+			prefillDatesFromActs();
+		} catch (e) {
+			importError = e instanceof Error ? e.message : 'Failed to fetch iCal feed';
+		} finally {
+			isFetching = false;
+		}
+	}
+
+	async function handleIcalFileUpload(event: Event) {
+		const file = (event.target as HTMLInputElement).files?.[0];
+		if (!file) return;
+		importError = '';
+		parsedActs = [];
+
+		try {
+			const text = await file.text();
+			const result = parseIcal(text);
+			parsedActs = result.acts;
+			if (result.title && !name) name = result.title;
+			prefillDatesFromActs();
+		} catch (e) {
+			importError = e instanceof Error ? e.message : 'Failed to parse iCal file';
+		}
+	}
+
+	function prefillDatesFromActs() {
+		if (parsedActs.length > 0) {
+			const starts = parsedActs.map((a) => a.startTime).sort();
+			const ends = parsedActs.map((a) => a.endTime).sort();
+			if (!startDate) startDate = starts[0].split('T')[0];
+			if (!endDate) endDate = ends[ends.length - 1].split('T')[0];
 		}
 	}
 
@@ -132,7 +170,9 @@
 				startDate,
 				endDate,
 				clashfinderSlug:
-					importType === 'clashfinder' && clashfinderSlug ? clashfinderSlug : undefined
+					importType === 'clashfinder' && clashfinderSlug ? clashfinderSlug : undefined,
+				icalUrl:
+					importType === 'ical' && icalUrl ? icalUrl : undefined
 			};
 
 			let fId: number;
@@ -191,6 +231,13 @@
 					<div class="text-xs text-base-content/60">Import from clashfinder.com</div>
 				</div>
 			</label>
+			<label class="flex cursor-pointer items-center gap-3 rounded-lg border border-base-300 p-4 {importType === 'ical' ? 'border-primary bg-base-200' : ''}">
+				<input type="radio" name="importType" class="radio radio-primary" bind:group={importType} value="ical" />
+				<div>
+					<div class="font-medium">iCal feed or file</div>
+					<div class="text-xs text-base-content/60">Import from a .ics URL or file</div>
+				</div>
+			</label>
 			<label class="flex cursor-pointer items-center gap-3 rounded-lg border border-base-300 p-4 {importType === 'skip' ? 'border-primary bg-base-200' : ''}">
 				<input type="radio" name="importType" class="radio radio-primary" bind:group={importType} value="skip" />
 				<div>
@@ -234,6 +281,61 @@
 				{#if parsedActs.length > 0}
 					<div class="alert alert-success text-sm">
 						<span>{parsedActs.length} acts loaded{name ? ` from "${name}"` : ''}</span>
+					</div>
+				{/if}
+
+				{#if importError}
+					<div class="alert alert-error text-sm">
+						<span>{importError}</span>
+					</div>
+				{/if}
+			</div>
+		{/if}
+
+		<!-- iCal input -->
+		{#if importType === 'ical'}
+			<div class="space-y-3">
+				<label class="form-control w-full">
+					<div class="label"><span class="label-text">iCal feed URL</span></div>
+					<input
+						type="url"
+						class="input w-full"
+						placeholder="https://example.com/calendar.ics"
+						bind:value={icalUrl}
+					/>
+					<div class="label">
+						<span class="label-text-alt text-base-content/50">Paste a URL to a .ics calendar feed for auto-sync</span>
+					</div>
+				</label>
+
+				{#if icalUrl && !parsedActs.length}
+					<button
+						class="btn btn-primary btn-sm"
+						onclick={handleIcalFetch}
+						disabled={isFetching}
+					>
+						{#if isFetching}
+							<span class="loading loading-spinner loading-xs"></span>
+						{/if}
+						Fetch Schedule
+					</button>
+				{/if}
+
+				<div class="divider text-xs text-base-content/40">or upload a file</div>
+
+				<label class="form-control w-full">
+					<div class="label"><span class="label-text">Upload .ics file</span></div>
+					<input
+						type="file"
+						class="file-input w-full"
+						accept=".ics,text/calendar"
+						onchange={handleIcalFileUpload}
+					/>
+				</label>
+
+				{#if parsedActs.length > 0}
+					<div class="alert alert-success text-sm">
+						<span>{parsedActs.length} events loaded{name ? ` from "${name}"` : ''}</span>
 					</div>
 				{/if}
 

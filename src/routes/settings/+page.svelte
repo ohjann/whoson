@@ -253,7 +253,7 @@
 					</select>
 				</label>
 
-				{#if activeFestival?.clashfinderSlug}
+				{#if activeFestival?.clashfinderSlug || activeFestival?.icalUrl}
 					<!-- Print Advisory -->
 					{#if activeFestival.printAdvisoryLabel}
 						{@const level = activeFestival.printAdvisoryLevel ?? 0}

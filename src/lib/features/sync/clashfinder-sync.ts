@@ -1,6 +1,7 @@
 import { db } from '$lib/db';
 import type { Act, Festival } from '$lib/types';
 import { fetchClashfinderLineup } from '$lib/features/import/clashfinder';
+import { fetchIcalFeed } from '$lib/features/import/ical';
 import { updateFestival } from '$lib/features/festival/operations';
 import { rescheduleAllNotifications } from '$lib/features/notifications/local';
 
@@ -15,22 +16,37 @@ export interface SyncResult {
 
 const SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+function hasSyncSource(festival: Festival): boolean {
+  return !!(festival.clashfinderSlug || festival.icalUrl);
+}
+
 export function shouldSync(festival: Festival): boolean {
-  if (!festival.clashfinderSlug) return false;
+  if (!hasSyncSource(festival)) return false;
   if (typeof navigator !== 'undefined' && !navigator.onLine) return false;
   if (!festival.lastSyncAt) return true;
   const elapsed = Date.now() - new Date(festival.lastSyncAt).getTime();
   return elapsed > SYNC_INTERVAL_MS;
 }
 
+async function fetchLatestLineup(festival: Festival): Promise<{ acts: Array<{ name: string; stage: string; startTime: string; endTime: string }>; printAdvisory?: { level: number; label: string; lastUpdate: string } }> {
+  if (festival.clashfinderSlug) {
+    return fetchClashfinderLineup(festival.clashfinderSlug);
+  }
+  if (festival.icalUrl) {
+    const result = await fetchIcalFeed(festival.icalUrl);
+    return { acts: result.acts };
+  }
+  throw new Error('No sync source configured');
+}
+
 export async function syncFestivalLineup(festival: Festival): Promise<SyncResult> {
-  if (!festival.clashfinderSlug || festival.id == null) {
-    return { changed: false, added: [], removed: [], moved: [], error: 'No Clashfinder slug' };
+  if (!hasSyncSource(festival) || festival.id == null) {
+    return { changed: false, added: [], removed: [], moved: [], error: 'No sync source configured' };
   }
 
-  let result: Awaited<ReturnType<typeof fetchClashfinderLineup>>;
+  let result: Awaited<ReturnType<typeof fetchLatestLineup>>;
   try {
-    result = await fetchClashfinderLineup(festival.clashfinderSlug);
+    result = await fetchLatestLineup(festival);
   } catch (e) {
     return {
       changed: false,

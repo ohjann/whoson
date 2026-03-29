@@ -15,6 +15,7 @@ export interface Festival {
   endDate: string; // ISO 8601 date string
   theme?: FestivalTheme;
   clashfinderSlug?: string;
+  icalUrl?: string; // iCal feed URL for auto-sync
   lastSyncAt?: string; // ISO datetime of last successful Clashfinder sync
   printAdvisoryLevel?: number; // 1-5, from Clashfinder
   printAdvisoryLabel?: string; // e.g. "5 - Don't even think about it"
