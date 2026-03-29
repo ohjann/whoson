@@ -10,8 +10,37 @@
 	import ThemePicker from '$lib/features/theme/ThemePicker.svelte';
 	import { addToast } from '$lib/features/notifications/toasts.svelte.js';
 	import { exportHighlightsAsJson } from '$lib/features/export';
+	import { syncFestivalLineup } from '$lib/features/sync/clashfinder-sync';
+	import { setSyncing } from '$lib/features/sync/sync-state.svelte';
 	import { getNow, setTimeOffset, resetTime, isTimeShifted, jumpTo } from '$lib/debug/time.svelte';
 	import type { Festival, FestivalTheme, Act, UserHighlight } from '$lib/types';
+
+	let syncingNow = $state(false);
+
+	async function handleSyncNow() {
+		if (!activeFestival) return;
+		syncingNow = true;
+		setSyncing(true);
+		try {
+			const result = await syncFestivalLineup(activeFestival);
+			if (result.error) {
+				addToast({ title: 'Sync failed', message: result.error });
+			} else if (result.changed) {
+				const parts: string[] = [];
+				if (result.added.length) parts.push(`${result.added.length} added`);
+				if (result.removed.length) parts.push(`${result.removed.length} removed`);
+				if (result.moved.length) parts.push(`${result.moved.length} changed`);
+				addToast({ title: 'Schedule updated', message: parts.join(', ') });
+			} else {
+				addToast({ title: 'Up to date', message: 'No changes found.' });
+			}
+		} catch {
+			addToast({ title: 'Sync failed', message: 'Unable to reach Clashfinder.' });
+		} finally {
+			syncingNow = false;
+			setSyncing(false);
+		}
+	}
 
 	const festivalsQuery = useLiveQuery(() => db.festivals.toArray(), [] as Festival[]);
 	const settingsQuery = useLiveQuery(() => db.settings.toCollection().first(), undefined);
@@ -223,6 +252,37 @@
 						{/each}
 					</select>
 				</label>
+
+				{#if activeFestival?.clashfinderSlug}
+					<!-- Print Advisory -->
+					{#if activeFestival.printAdvisoryLabel}
+						{@const level = activeFestival.printAdvisoryLevel ?? 0}
+						<div class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm {level >= 4 ? 'bg-error/10 text-error' : level >= 3 ? 'bg-warning/10 text-warning' : 'bg-success/10 text-success'}">
+							<span class="font-medium">{activeFestival.printAdvisoryLabel}</span>
+						</div>
+					{/if}
+
+					<!-- Sync -->
+					<div class="flex items-center justify-between gap-2">
+						<div class="text-xs text-base-content/50">
+							{#if activeFestival.lastSyncAt}
+								Last synced: {new Date(activeFestival.lastSyncAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+							{:else}
+								Never synced
+							{/if}
+						</div>
+						<button
+							class="btn btn-outline btn-sm"
+							onclick={handleSyncNow}
+							disabled={syncingNow}
+						>
+							{#if syncingNow}
+								<span class="loading loading-spinner loading-xs"></span>
+							{/if}
+							Sync now
+						</button>
+					</div>
+				{/if}
 			{/if}
 		</div>
 	</section>

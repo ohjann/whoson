@@ -5,6 +5,10 @@
 	import { db } from '$lib/db';
 	import { applyFestivalTheme } from '$lib/features/theme/index.js';
 	import { liveQuery } from 'dexie';
+	import { syncFestivalLineup, shouldSync } from '$lib/features/sync/clashfinder-sync';
+	import { setSyncing, setLastSyncResult } from '$lib/features/sync/sync-state.svelte';
+	import { addToast } from '$lib/features/notifications/toasts.svelte.js';
+	import Toasts from '$lib/features/notifications/Toasts.svelte';
 
 	let { children } = $props();
 
@@ -19,6 +23,53 @@
 			error: (err) => console.error('theme liveQuery error:', err)
 		});
 		return () => sub.unsubscribe();
+	});
+
+	// Auto-sync Clashfinder on app foreground
+	$effect(() => {
+		async function checkSync() {
+			const settings = await db.settings.toCollection().first();
+			if (!settings?.activeFestivalId) return;
+			const festival = await db.festivals.get(settings.activeFestivalId);
+			if (!festival || !shouldSync(festival)) return;
+
+			setSyncing(true);
+			try {
+				const result = await syncFestivalLineup(festival);
+				setLastSyncResult(result);
+				if (result.error) {
+					addToast({ title: 'Sync failed', message: result.error });
+				} else if (result.changed) {
+					const parts: string[] = [];
+					if (result.added.length) parts.push(`${result.added.length} added`);
+					if (result.removed.length) parts.push(`${result.removed.length} removed`);
+					if (result.moved.length) parts.push(`${result.moved.length} changed`);
+					addToast({ title: 'Schedule updated', message: parts.join(', ') });
+				}
+			} finally {
+				setSyncing(false);
+			}
+		}
+
+		// Check on mount
+		checkSync();
+
+		// Check on app resume (Capacitor)
+		let handle: { remove: () => Promise<void> } | null = null;
+		import('@capacitor/app').then(({ App }) => {
+			App.addListener('appStateChange', (state) => {
+				if (state.isActive) checkSync();
+			}).then((h) => { handle = h; });
+		}).catch(() => {
+			// Not running in Capacitor (web dev) — use visibilitychange
+			const onVisible = () => {
+				if (document.visibilityState === 'visible') checkSync();
+			};
+			document.addEventListener('visibilitychange', onVisible);
+			handle = { remove: async () => document.removeEventListener('visibilitychange', onVisible) };
+		});
+
+		return () => { handle?.remove(); };
 	});
 
 	// Focus management on route transitions — moves focus to main h1 for screen readers
@@ -81,3 +132,5 @@
 		{/each}
 	</nav>
 </div>
+
+<Toasts />

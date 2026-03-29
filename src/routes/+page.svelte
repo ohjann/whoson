@@ -6,6 +6,7 @@
   import Welcome from '$lib/features/onboarding/Welcome.svelte';
   import ActDetailSheet from '$lib/features/schedule/ActDetailSheet.svelte';
   import { getNow } from '$lib/debug/time.svelte';
+  import { getSyncing, getLastSyncResult, clearSyncResult } from '$lib/features/sync/sync-state.svelte';
   import type { Act, Festival, HiddenAct, UserHighlight } from '$lib/types';
 
   let selectedAct = $state<Act | undefined>(undefined);
@@ -204,8 +205,13 @@
   {:else}
     <!-- Active festival: Now/Next summary -->
     {@const festival = activeFestival}
-    <div class="mb-4 flex items-center justify-between">
-      <h1 class="text-2xl font-bold">{festival.name}</h1>
+    <div class="mb-2 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <h1 class="text-2xl font-bold">{festival.name}</h1>
+        {#if getSyncing()}
+          <span class="loading loading-spinner loading-xs text-primary"></span>
+        {/if}
+      </div>
 
       <!-- Export / share menu -->
       {#if activeFestival && highlightsForExport.length > 0}
@@ -245,6 +251,44 @@
         </div>
       {/if}
     </div>
+
+    <!-- Print advisory warning -->
+    {#if festival.printAdvisoryLevel && festival.printAdvisoryLevel >= 4}
+      <p class="mb-3 text-xs text-warning">Schedule may change — {festival.printAdvisoryLabel}</p>
+    {/if}
+
+    <!-- Sync change banner -->
+    {@const syncResult = getLastSyncResult()}
+    {#if syncResult?.changed}
+      <div class="mb-4 rounded-lg border border-primary/20 bg-primary/5 p-3">
+        <div class="flex items-start justify-between gap-2">
+          <div>
+            <p class="text-sm font-medium">Schedule updated</p>
+            <ul class="mt-1 space-y-0.5 text-xs text-base-content/60">
+              {#each syncResult.added as name}
+                <li>+ {name} added</li>
+              {/each}
+              {#each syncResult.removed as name}
+                <li>- {name} removed</li>
+              {/each}
+              {#each syncResult.moved as { name, change }}
+                <li>~ {name}: {change}</li>
+              {/each}
+            </ul>
+          </div>
+          <button
+            type="button"
+            class="btn btn-ghost btn-xs"
+            onclick={clearSyncResult}
+            aria-label="Dismiss"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-4">
+              <path fill-rule="evenodd" d="M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.75 0 1 1 1.06 1.06L13.06 12l5.47 5.47a.75.75 0 1 1-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    {/if}
 
     {#if festivalStatus === 'before'}
       <!-- Festival hasn't started yet -->

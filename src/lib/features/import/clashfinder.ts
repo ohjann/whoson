@@ -5,9 +5,16 @@ export interface Act {
 	stage: string;
 }
 
+export interface PrintAdvisory {
+	level: number; // 1-5
+	label: string; // e.g. "5 - Don't even think about it"
+	lastUpdate: string; // e.g. "13 days ago"
+}
+
 export interface ClashfinderResult {
 	title: string;
 	acts: Act[];
+	printAdvisory?: PrintAdvisory;
 }
 
 export function parseClashfinderUrl(url: string): string | null {
@@ -116,7 +123,21 @@ export function parseClashfinderHtml(html: string, slug: string): ClashfinderRes
 		);
 	}
 
-	return { title, acts };
+	// Parse print advisory
+	let printAdvisory: PrintAdvisory | undefined;
+	const advisoryMatch = html.match(
+		/<span\s+class="printAdvisoryLevelSmall\s+level(\d)">([^<]+)<\/span>/
+	);
+	if (advisoryMatch) {
+		const level = Number(advisoryMatch[1]);
+		const label = advisoryMatch[2].trim();
+		// Extract "Last update: X days ago" from the title attribute
+		const titleMatch = html.match(/id="printAdvisorySmall"\s+title="[^"]*Last update:\s*([^"]+)"/);
+		const lastUpdate = titleMatch?.[1]?.trim() ?? '';
+		printAdvisory = { level, label, lastUpdate };
+	}
+
+	return { title, acts, printAdvisory };
 }
 
 /**
