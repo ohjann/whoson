@@ -68,9 +68,15 @@
   </button>
 
   <!-- Right-side badges -->
-  <div class="flex flex-shrink-0 items-center gap-1" aria-hidden="true">
+  <button
+    type="button"
+    class="flex flex-shrink-0 items-center gap-1"
+    aria-hidden="true"
+    tabindex="-1"
+    onclick={() => onClick(act)}
+  >
     {#if isClashing}
       <span class="badge badge-warning badge-sm">⚠</span>
     {/if}
-  </div>
+  </button>
 </article>

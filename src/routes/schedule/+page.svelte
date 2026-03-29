@@ -372,6 +372,7 @@
     isHidden={selectedAct.id != null && hiddenActIds.has(selectedAct.id)}
     clashingWith={getClashingActsFor(selectedAct)}
     onclose={closeSheet}
+    onresolveclashes={() => { showClashResolver = true; }}
   />
 {/if}
 

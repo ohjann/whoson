@@ -16,13 +16,15 @@
     highlight,
     isHidden = false,
     clashingWith = [],
-    onclose
+    onclose,
+    onresolveclashes
   }: {
     act: Act;
     highlight: UserHighlight | undefined;
     isHidden?: boolean;
     clashingWith?: Act[];
     onclose?: () => void;
+    onresolveclashes?: () => void;
   } = $props();
 
   const isHighlighted = $derived(highlight !== undefined);
@@ -157,11 +159,18 @@
 
       <!-- Clash warnings -->
       {#if clashingWith.length > 0}
-        <div class="mb-4 space-y-2">
+        <button
+          type="button"
+          class="mb-4 w-full space-y-2 text-left"
+          onclick={() => { onclose?.(); onresolveclashes?.(); }}
+        >
           {#each clashingWith as other (other.id)}
             <ClashWarning actA={act} actB={other} />
           {/each}
-        </div>
+          {#if onresolveclashes}
+            <p class="text-xs font-medium text-primary text-center pt-1">Tap to resolve</p>
+          {/if}
+        </button>
       {/if}
 
       <!-- Highlight toggle -->
