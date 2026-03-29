@@ -35,10 +35,11 @@ export function parseClashfinderUrl(url: string): string | null {
  * Uses a Vite dev proxy on localhost to avoid CORS.
  */
 export async function fetchClashfinderLineup(slug: string): Promise<ClashfinderResult> {
-	const base =
-		typeof window !== 'undefined' && window.location.hostname === 'localhost'
-			? '/clashfinder-proxy'
-			: 'https://clashfinder.com';
+	const isDevServer =
+		typeof window !== 'undefined' &&
+		window.location.hostname === 'localhost' &&
+		window.location.protocol === 'http:';
+	const base = isDevServer ? '/clashfinder-proxy' : 'https://clashfinder.com';
 	// Always use /s/ (desktop) path — it has the full HTML structure we parse
 	const url = `${base}/s/${slug}/`;
 
