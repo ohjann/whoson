@@ -13,7 +13,7 @@ An offline-first festival schedule companion for iOS and Android. Browse artist 
 ## Features
 
 - Import schedules from Clashfinder
-- Highlight acts with priority levels and personal notes
+- Highlight acts and get notified before they start
 - Clash detection and resolution
 - "Now playing / up next" view
 - Local push notifications before sets
