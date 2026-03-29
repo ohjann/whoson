@@ -6,8 +6,12 @@
 
 	const settingsQuery = useLiveQuery(() => db.settings.toCollection().first(), undefined);
 	const allMapsQuery = useLiveQuery(() => db.festivalMaps.toArray(), []);
+	const festivalsQuery = useLiveQuery(() => db.festivals.toArray(), []);
 
 	const activeFestivalId = $derived(settingsQuery.value?.activeFestivalId);
+	const activeFestival = $derived(
+		(festivalsQuery.value ?? []).find((f) => f.id === activeFestivalId)
+	);
 	const mapQuery = $derived({
 		value: (allMapsQuery.value ?? []).find((m) => m.festivalId === activeFestivalId)
 	});
@@ -55,6 +59,17 @@
 
 	function resetZoom() {
 		panzoomInstance?.reset();
+	}
+
+	// Map upload from this page
+	async function handleMapUpload(event: Event) {
+		const file = (event.target as HTMLInputElement).files?.[0];
+		if (!file || !activeFestivalId) return;
+		await db.festivalMaps.put({
+			festivalId: activeFestivalId,
+			imageBlob: file,
+			updatedAt: new Date().toISOString()
+		});
 	}
 
 	onDestroy(() => {
@@ -108,7 +123,19 @@
 				/>
 			</svg>
 			<p class="text-base-content/60">No map uploaded yet</p>
-			<a href="/settings/" class="btn btn-primary btn-sm">Add map in settings</a>
+			{#if activeFestival}
+				<label class="btn btn-primary btn-sm">
+					Upload map image
+					<input
+						type="file"
+						class="hidden"
+						accept="image/*"
+						onchange={handleMapUpload}
+					/>
+				</label>
+			{:else}
+				<a href="/festivals/new/" class="btn btn-primary btn-sm">Add a festival first</a>
+			{/if}
 		</div>
 	{/if}
 </div>
