@@ -12,8 +12,13 @@
       "versionDate": "2026-03-29",
       "versionDescription": "Initial release",
       "downloadURL": "https://github.com/ohjann/whoson/releases/download/v0.0.2/WhosOn.ipa",
-      "localizedDescription": "WhosOn is a festival schedule companion app that helps you plan your festival experience.",
+      "localizedDescription": "WhosOn is a festival schedule companion app that helps you plan your festival experience. Import lineups from Clashfinder or iCal feeds, highlight the acts you want to see, detect and resolve schedule clashes, and get notified before sets start. Fully offline — all data stays on your device.",
       "iconURL": "https://raw.githubusercontent.com/ohjann/whoson/main/altstore/icon.png",
+      "screenshotURLs": [
+        "https://raw.githubusercontent.com/ohjann/whoson/main/docs/screenshots/now-playing.png",
+        "https://raw.githubusercontent.com/ohjann/whoson/main/docs/screenshots/schedule.png",
+        "https://raw.githubusercontent.com/ohjann/whoson/main/docs/screenshots/welcome.png"
+      ],
       "size": 1006066,
       "minOSVersion": "16.0"
     }
