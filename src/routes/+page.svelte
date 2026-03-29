@@ -298,7 +298,14 @@
               </div>
 
               <!-- Act name — big and unmissable -->
-              <h2 class="text-xl font-bold leading-tight tracking-tight">{act.name}</h2>
+              <h2 class="flex items-center gap-1.5 text-xl font-bold leading-tight tracking-tight">
+                {act.name}
+                {#if isHighlighted(act)}
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-4 text-warning shrink-0">
+                    <path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.006Z" clip-rule="evenodd" />
+                  </svg>
+                {/if}
+              </h2>
 
               <!-- Time range -->
               <p class="mt-1 text-sm text-base-content/50 tabular-nums">
@@ -327,7 +334,14 @@
               <div class="flex items-baseline gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-base-200/50">
                 <span class="w-10 shrink-0 text-right text-sm font-semibold tabular-nums text-primary">{mins}m</span>
                 <div class="min-w-0 flex-1">
-                  <p class="truncate font-medium">{act.name}</p>
+                  <p class="flex items-center gap-1 truncate font-medium">
+                    {act.name}
+                    {#if isHighlighted(act)}
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-3 text-warning shrink-0">
+                        <path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.006Z" clip-rule="evenodd" />
+                      </svg>
+                    {/if}
+                  </p>
                   <p class="text-xs text-base-content/40">{act.stage} · {act.startTime.slice(11, 16)}</p>
                 </div>
               </div>
