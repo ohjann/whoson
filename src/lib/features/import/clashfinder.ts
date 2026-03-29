@@ -45,7 +45,10 @@ export async function fetchClashfinderLineup(slug: string): Promise<ClashfinderR
 
 	let response: Response;
 	try {
-		response = await fetch(url);
+		// Use a desktop User-Agent to avoid mobile redirect (/s/ → /m/)
+		response = await fetch(url, {
+			headers: { 'User-Agent': 'WhosOn/1.0' }
+		});
 	} catch {
 		throw new Error('Network failure: unable to reach Clashfinder');
 	}
