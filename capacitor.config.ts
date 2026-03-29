@@ -4,7 +4,7 @@ const config: CapacitorConfig = {
   appId: 'com.whoson.app',
   appName: 'WhosOn',
   webDir: 'build',
-  appVersion: '0.0.2',
+  appVersion: '0.0.3',
   plugins: {
     CapacitorHttp: {
       enabled: true
