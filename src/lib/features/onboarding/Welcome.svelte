@@ -58,7 +58,7 @@
     </a>
     {#if ondismiss}
       <button type="button" class="btn btn-ghost btn-sm" onclick={ondismiss}>
-        Browse without a festival
+        Skip for now
       </button>
     {/if}
   </div>

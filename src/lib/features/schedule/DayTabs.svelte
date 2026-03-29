@@ -21,7 +21,12 @@
   }
 </script>
 
-<div class="flex gap-1 overflow-x-auto px-4 pb-1" role="tablist" aria-label="Festival days">
+<div
+  class="flex gap-1 overflow-x-auto px-4 pb-1"
+  role="tablist"
+  aria-label="Festival days"
+  style="mask-image: linear-gradient(to right, transparent 0, black 1rem, black calc(100% - 1rem), transparent 100%); -webkit-mask-image: linear-gradient(to right, transparent 0, black 1rem, black calc(100% - 1rem), transparent 100%);"
+>
   {#each days as day (day)}
     {@const clashCount = clashCounts.get(day) ?? 0}
     <button

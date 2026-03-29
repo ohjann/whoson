@@ -4,8 +4,11 @@
   import { getPlayingNow, getUpNext } from '$lib/features/schedule/utils';
   import { exportHighlightsAsIcal, copyShareableText } from '$lib/features/export';
   import Welcome from '$lib/features/onboarding/Welcome.svelte';
+  import ActDetailSheet from '$lib/features/schedule/ActDetailSheet.svelte';
   import { getNow } from '$lib/debug/time.svelte';
   import type { Act, Festival, HiddenAct, UserHighlight } from '$lib/types';
+
+  let selectedAct = $state<Act | undefined>(undefined);
 
   const ONBOARDING_DISMISSED_KEY = 'whoson_onboarding_dismissed';
   let onboardingDismissed = $state(
@@ -208,6 +211,12 @@
           </button>
 
           {#if exportMenuOpen}
+            <button
+              type="button"
+              class="fixed inset-0 z-40"
+              aria-label="Close menu"
+              onclick={() => exportMenuOpen = false}
+            ></button>
             <div class="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg bg-base-200 shadow-lg">
               <button
                 type="button"
@@ -275,9 +284,11 @@
           {#each playingNow as act, i (act.id)}
             {@const progress = setProgress(act)}
             {@const remaining = minutesLeft(act)}
-            <article
-              class="relative overflow-hidden rounded-2xl border border-base-content/5 p-4"
+            <button
+              type="button"
+              class="relative w-full cursor-pointer overflow-hidden rounded-2xl border border-base-content/5 p-4 text-left focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-base-100"
               style="background: linear-gradient(135deg, color-mix(in oklch, var(--color-primary) {Math.max(8, 20 - i * 4)}%, var(--color-base-200)), var(--color-base-200));"
+              onclick={() => { selectedAct = act; }}
             >
               <!-- Stage pill -->
               <div class="mb-2 flex items-center justify-between">
@@ -307,19 +318,26 @@
                   style="width: {progress}%"
                 ></div>
               </div>
-            </article>
+            </button>
           {/each}
         </div>
       {/if}
 
       <!-- Up Next -->
+      {#if upNext.length === 0 && playingNow.length > 0}
+        <p class="mt-6 text-center text-sm text-base-content/30">Nothing coming up in the next hour</p>
+      {/if}
       {#if upNext.length > 0}
         <section class="mt-8">
           <h2 class="mb-3 text-xs font-semibold uppercase tracking-widest text-base-content/40">Up Next</h2>
           <div class="space-y-1">
             {#each upNext as act (act.id)}
               {@const mins = minutesUntil(act)}
-              <div class="flex items-baseline gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-base-200/50">
+              <button
+                type="button"
+                class="flex w-full items-baseline gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-base-200/50 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-base-100"
+                onclick={() => { selectedAct = act; }}
+              >
                 <span class="w-10 shrink-0 text-right text-sm font-semibold tabular-nums text-primary">{mins}m</span>
                 <div class="min-w-0 flex-1">
                   <p class="flex items-center gap-1 truncate font-medium">
@@ -332,7 +350,7 @@
                   </p>
                   <p class="text-xs text-base-content/40">{act.stage} · {act.startTime.slice(11, 16)}</p>
                 </div>
-              </div>
+              </button>
             {/each}
           </div>
         </section>
@@ -341,3 +359,11 @@
 
   {/if}
 </div>
+
+{#if selectedAct}
+  <ActDetailSheet
+    act={selectedAct}
+    highlight={selectedAct.id != null ? highlightMap.get(`${selectedAct.festivalId}:${selectedAct.id}`) : undefined}
+    onclose={() => { selectedAct = undefined; }}
+  />
+{/if}

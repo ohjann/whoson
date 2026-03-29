@@ -105,6 +105,12 @@
     }
   });
 
+  // Reset scroll when switching days
+  $effect(() => {
+    selectedDay; // track
+    if (typeof window !== 'undefined') window.scrollTo(0, 0);
+  });
+
   // Clash pairs per day (highlighted acts only)
   const clashesPerDay = $derived.by(() => {
     const result = new Map<string, Array<[Act, Act]>>();
@@ -245,7 +251,7 @@
         {#if searchQuery}
           <button
             type="button"
-            class="btn btn-ghost btn-xs btn-circle"
+            class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11"
             onclick={() => { searchQuery = ''; }}
             aria-label="Clear search"
           >

@@ -188,7 +188,10 @@
 	<!-- Active Festival -->
 	<section class="card bg-base-200 shadow-sm">
 		<div class="card-body gap-3">
-			<h2 class="card-title text-lg">Active Festival</h2>
+			<h2 class="card-title text-lg">
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-5 text-primary" aria-hidden="true"><path fill-rule="evenodd" d="M6.75 2.25A.75.75 0 0 1 7.5 3v1.5h9V3A.75.75 0 0 1 18 3v1.5h.75a3 3 0 0 1 3 3v11.25a3 3 0 0 1-3 3H5.25a3 3 0 0 1-3-3V7.5a3 3 0 0 1 3-3H6V3a.75.75 0 0 1 .75-.75Zm13.5 9a1.5 1.5 0 0 0-1.5-1.5H5.25a1.5 1.5 0 0 0-1.5 1.5v7.5a1.5 1.5 0 0 0 1.5 1.5h13.5a1.5 1.5 0 0 0 1.5-1.5v-7.5Z" clip-rule="evenodd" /></svg>
+				Active Festival
+			</h2>
 			{#if festivals.length === 0}
 				<p class="text-sm text-base-content/70">No festivals added yet.</p>
 			{:else}
@@ -215,7 +218,10 @@
 	{#if activeFestival}
 		<section class="card bg-base-200 shadow-sm">
 			<div class="card-body gap-3">
-				<h2 class="card-title text-lg">Theme & Display</h2>
+				<h2 class="card-title text-lg">
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-5 text-primary" aria-hidden="true"><path fill-rule="evenodd" d="M2.25 4.125c0-1.036.84-1.875 1.875-1.875h5.25c1.036 0 1.875.84 1.875 1.875V17.25a4.5 4.5 0 1 1-9 0V4.125Zm4.5 14.25a1.125 1.125 0 1 0 0-2.25 1.125 1.125 0 0 0 0 2.25Z" clip-rule="evenodd" /><path d="M10.719 21.75h9.156c1.036 0 1.875-.84 1.875-1.875v-5.25c0-1.036-.84-1.875-1.875-1.875h-.14l-8.742 8.743c-.09.089-.18.175-.274.257ZM12.738 17.625l6.474-6.474a1.875 1.875 0 0 0-1.337-.551H10.5a3.375 3.375 0 0 0 2.238 6.025Z" /></svg>
+				Theme & Display
+			</h2>
 
 				<ThemePicker
 					value={activeFestival.theme}
@@ -243,7 +249,10 @@
 	<!-- Notifications -->
 	<section class="card bg-base-200 shadow-sm">
 		<div class="card-body gap-3">
-			<h2 class="card-title text-lg">Notifications</h2>
+			<h2 class="card-title text-lg">
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-5 text-primary" aria-hidden="true"><path fill-rule="evenodd" d="M5.25 9a6.75 6.75 0 0 1 13.5 0v.75c0 2.123.8 4.057 2.118 5.52a.75.75 0 0 1-.297 1.206c-1.544.57-3.16.99-4.831 1.243a3.75 3.75 0 1 1-7.48 0 24.585 24.585 0 0 1-4.831-1.244.75.75 0 0 1-.298-1.205A8.217 8.217 0 0 0 5.25 9.75V9Zm4.502 8.9a2.25 2.25 0 1 0 4.496 0 25.057 25.057 0 0 1-4.496 0Z" clip-rule="evenodd" /></svg>
+				Notifications
+			</h2>
 
 			{#if notifPermission === 'denied'}
 				<div class="alert alert-warning text-sm">
@@ -291,7 +300,10 @@
 	<!-- Data Management -->
 	<section class="card bg-base-200 shadow-sm">
 		<div class="card-body gap-3">
-			<h2 class="card-title text-lg">Data Management</h2>
+			<h2 class="card-title text-lg">
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-5 text-primary" aria-hidden="true"><path d="M21 6.375c0 2.692-4.03 4.875-9 4.875S3 9.067 3 6.375 7.03 1.5 12 1.5s9 2.183 9 4.875Z" /><path d="M12 12.75c2.685 0 5.19-.586 7.078-1.609a8.283 8.283 0 0 0 1.897-1.384c.016.121.025.244.025.368C21 12.817 16.97 15 12 15s-9-2.183-9-4.875c0-.124.009-.247.025-.368a8.285 8.285 0 0 0 1.897 1.384C6.809 12.164 9.315 12.75 12 12.75Z" /><path d="M12 18.75c2.685 0 5.19-.586 7.078-1.609a8.282 8.282 0 0 0 1.897-1.384c.016.121.025.244.025.368 0 2.692-4.03 4.875-9 4.875s-9-2.183-9-4.875c0-.124.009-.247.025-.368a8.284 8.284 0 0 0 1.897 1.384C6.809 18.164 9.315 18.75 12 18.75Z" /></svg>
+				Data Management
+			</h2>
 
 			<button class="btn btn-outline btn-sm self-start" onclick={handleExportHighlights}>
 				Export highlights as JSON
@@ -338,7 +350,10 @@
 	<!-- About -->
 	<section class="card bg-base-200 shadow-sm">
 		<div class="card-body gap-2">
-			<h2 class="card-title text-lg">About</h2>
+			<h2 class="card-title text-lg">
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-5 text-primary" aria-hidden="true"><path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm8.706-1.442c1.146-.573 2.437.463 2.126 1.706l-.709 2.836.042-.02a.75.75 0 0 1 .67 1.34l-.04.022c-1.147.573-2.438-.463-2.127-1.706l.71-2.836-.042.02a.75.75 0 1 1-.671-1.34l.041-.022ZM12 9a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z" clip-rule="evenodd" /></svg>
+				About
+			</h2>
 			<button
 				type="button"
 				class="text-sm text-left"
@@ -349,7 +364,7 @@
 			<p class="text-sm text-base-content/70">Festival schedule companion app.</p>
 			<div class="flex flex-col gap-1 text-sm">
 				<a
-					href="https://github.com/example/whoson"
+					href="https://github.com/ohjann/whoson"
 					class="link link-primary"
 					target="_blank"
 					rel="noopener"

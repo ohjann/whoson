@@ -2,6 +2,7 @@
 	import { onDestroy } from 'svelte';
 	import { db } from '$lib/db';
 	import { useLiveQuery } from '$lib/db/live.svelte';
+	import Panzoom from '@panzoom/panzoom';
 
 	const settingsQuery = useLiveQuery(() => db.settings.toCollection().first(), undefined);
 	const allMapsQuery = useLiveQuery(() => db.festivalMaps.toArray(), []);
@@ -15,6 +16,8 @@
 	let prevBlob: Blob | undefined;
 	let isFullscreen = $state(false);
 	let containerEl = $state<HTMLDivElement | undefined>(undefined);
+	let imgEl = $state<HTMLImageElement | undefined>(undefined);
+	let panzoomInstance: ReturnType<typeof Panzoom> | undefined;
 
 	async function toggleFullscreen() {
 		if (!containerEl) return;
@@ -50,6 +53,32 @@
 		if (oldUrl) URL.revokeObjectURL(oldUrl);
 	});
 
+	// Init panzoom on image
+	$effect(() => {
+		if (imgEl && objectUrl) {
+			panzoomInstance = Panzoom(imgEl, {
+				maxScale: 5,
+				minScale: 0.5,
+				contain: 'outside'
+			});
+			const parent = imgEl.parentElement;
+			if (parent) {
+				parent.addEventListener('wheel', panzoomInstance.zoomWithWheel);
+			}
+			return () => {
+				if (parent) {
+					parent.removeEventListener('wheel', panzoomInstance!.zoomWithWheel);
+				}
+				panzoomInstance?.destroy();
+				panzoomInstance = undefined;
+			};
+		}
+	});
+
+	function resetZoom() {
+		panzoomInstance?.reset();
+	}
+
 	onDestroy(() => {
 		if (objectUrl) URL.revokeObjectURL(objectUrl);
 	});
@@ -59,35 +88,49 @@
 	<div class="mb-4 flex items-center justify-between">
 		<h1 class="text-xl font-bold">Map</h1>
 		{#if objectUrl}
-			<button
-				type="button"
-				class="btn btn-ghost btn-sm"
-				aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-				onclick={toggleFullscreen}
-			>
-				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-5">
-					{#if isFullscreen}
-						<path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
-					{:else}
-						<path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
-					{/if}
-				</svg>
-			</button>
+			<div class="flex gap-1">
+				<button
+					type="button"
+					class="btn btn-ghost btn-sm"
+					aria-label="Reset zoom"
+					onclick={resetZoom}
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-5">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+					</svg>
+				</button>
+				<button
+					type="button"
+					class="btn btn-ghost btn-sm"
+					aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+					onclick={toggleFullscreen}
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-5">
+						{#if isFullscreen}
+							<path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+						{:else}
+							<path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+						{/if}
+					</svg>
+				</button>
+			</div>
 		{/if}
 	</div>
 
 	{#if objectUrl}
 		<div
 			bind:this={containerEl}
-			class="overflow-auto rounded-lg bg-base-200"
+			class="overflow-hidden rounded-lg bg-base-200 touch-none"
 			style="max-height: calc(100dvh - 12rem);"
 		>
 			<img
+				bind:this={imgEl}
 				src={objectUrl}
 				alt="Festival map"
 				class="block w-full"
 			/>
 		</div>
+		<p class="mt-2 text-center text-xs text-base-content/40">Pinch or scroll to zoom</p>
 	{:else}
 		<div class="flex flex-col items-center justify-center gap-4 py-16 text-center">
 			<svg

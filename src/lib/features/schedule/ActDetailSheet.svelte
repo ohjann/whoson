@@ -114,12 +114,7 @@
   <div class="relative z-10 w-full max-w-lg overflow-y-auto rounded-t-2xl bg-base-100 shadow-xl"
     style="max-height: 90dvh;"
   >
-    <!-- Drag handle -->
-    <div class="flex justify-center pt-3 pb-1">
-      <div class="h-1 w-10 rounded-full bg-base-content/20"></div>
-    </div>
-
-    <div class="p-5">
+    <div class="p-5 pt-6">
       <!-- Header -->
       <div class="mb-4 flex items-start justify-between gap-4">
         <div class="min-w-0 flex-1">
