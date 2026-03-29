@@ -51,3 +51,8 @@ export function getTimeOffsetHours(): number {
 export function isTimeShifted(): boolean {
 	return offsetMs !== 0;
 }
+
+/** Jump to a specific date/time. */
+export function jumpTo(dateTime: Date) {
+	setTimeOffset(dateTime.getTime() - Date.now());
+}

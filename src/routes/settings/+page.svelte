@@ -10,7 +10,7 @@
 	import ThemePicker from '$lib/features/theme/ThemePicker.svelte';
 	import { addToast } from '$lib/features/notifications/toasts.svelte.js';
 	import { exportHighlightsAsJson } from '$lib/features/export';
-	import { getNow, setTimeOffsetHours, getTimeOffsetHours, resetTime, isTimeShifted } from '$lib/debug/time.svelte';
+	import { getNow, setTimeOffset, resetTime, isTimeShifted, jumpTo } from '$lib/debug/time.svelte';
 	import type { Festival, FestivalTheme, Act, UserHighlight } from '$lib/types';
 
 	const festivalsQuery = useLiveQuery(() => db.festivals.toArray(), [] as Festival[]);
@@ -91,6 +91,7 @@
 			debugMode = !debugMode;
 			versionTaps = 0;
 			if (debugMode) {
+				jumpDatetime = formatDatetimeLocal(getNow());
 				addToast({ title: 'Debug mode', message: 'Debug tools enabled.' });
 			}
 		}
@@ -121,13 +122,30 @@
 		}
 	}
 
+	function formatDatetimeLocal(d: Date): string {
+		const pad = (n: number) => n.toString().padStart(2, '0');
+		return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+	}
+
+	let jumpDatetime = $state('');
+	let sliderHours = $state(0);
+
+	function handleJumpTo() {
+		if (!jumpDatetime) return;
+		sliderHours = 0;
+		jumpTo(new Date(jumpDatetime));
+	}
+
 	function handleTimeSlider(e: Event) {
 		const input = e.target as HTMLInputElement;
-		setTimeOffsetHours(Number(input.value));
+		sliderHours = Number(input.value);
+		// Offset from the datepicker time (or real time if not set)
+		const baseMs = jumpDatetime ? new Date(jumpDatetime).getTime() : Date.now();
+		const targetMs = baseMs + sliderHours * 60 * 60 * 1000;
+		setTimeOffset(targetMs - Date.now());
 	}
 
 	const debugNow = $derived(getNow());
-	const debugTimeOffset = $derived(getTimeOffsetHours());
 
 	// --- Data Management ---
 	let showClearConfirm = $state(false);
@@ -385,19 +403,38 @@
 						min="-24"
 						max="24"
 						step="0.5"
-						value={debugTimeOffset}
+						value={sliderHours}
 						oninput={handleTimeSlider}
 					/>
 					<div class="flex justify-between text-xs text-base-content/50">
 						<span>-24h</span>
-						<span class="font-mono {isTimeShifted() ? 'text-warning font-semibold' : ''}">
-							{#if isTimeShifted()}
-								{debugTimeOffset > 0 ? '+' : ''}{debugTimeOffset.toFixed(1)}h
+						<span class="font-mono {sliderHours !== 0 ? 'text-warning font-semibold' : ''}">
+							{#if sliderHours !== 0}
+								{sliderHours > 0 ? '+' : ''}{sliderHours.toFixed(1)}h
 							{:else}
-								now
+								0
 							{/if}
 						</span>
 						<span>+24h</span>
+					</div>
+
+					<!-- Jump to date -->
+					<div class="flex items-end gap-2">
+						<label class="form-control flex-1">
+							<div class="label"><span class="label-text">Jump to date & time</span></div>
+							<input
+								type="datetime-local"
+								class="input input-sm w-full"
+								bind:value={jumpDatetime}
+							/>
+						</label>
+						<button
+							class="btn btn-warning btn-sm"
+							onclick={handleJumpTo}
+							disabled={!jumpDatetime}
+						>
+							Jump
+						</button>
 					</div>
 
 					<p class="text-xs font-mono text-base-content/60">
@@ -405,7 +442,7 @@
 					</p>
 
 					{#if isTimeShifted()}
-						<button class="btn btn-ghost btn-xs" onclick={resetTime}>
+						<button class="btn btn-ghost btn-xs" onclick={() => { resetTime(); sliderHours = 0; jumpDatetime = formatDatetimeLocal(new Date()); }}>
 							Reset to real time
 						</button>
 					{/if}
