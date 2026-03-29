@@ -9,7 +9,6 @@ An offline-first festival schedule companion for iOS and Android. Browse artist 
 - Clash detection and resolution
 - "Now playing / up next" view
 - Local push notifications before sets
-- ntfy.sh integration for cross-device alerts
 - Fully offline — all data stored on-device
 
 ## Installation
@@ -22,23 +21,19 @@ WhosOn is distributed via AltStore, a sideloading tool that does not require a j
 2. Open AltStore on your iOS device and go to **Browse**.
 3. Tap the **+** button and enter the source URL:
    ```
-   https://raw.githubusercontent.com/OWNER/whoson/main/altstore/source.json
+   https://raw.githubusercontent.com/ohjann/whoson/main/altstore/source.json
    ```
 4. The WhosOn source will appear — tap **Get** to install.
 5. You will need to refresh the app in AltStore every 7 days (or use AltStore+ for automatic refresh).
-
-> **Note:** Replace `OWNER` in the URL with the actual GitHub username/organization once the repository is published.
 
 ### Android — APK
 
 WhosOn is distributed as a direct APK download (no Play Store required).
 
 1. On your Android device, go to **Settings → Apps → Special app access → Install unknown apps** and enable installation for your browser or file manager.
-2. Download the latest `WhosOn.apk` from the [Releases page](https://github.com/OWNER/whoson/releases/latest).
+2. Download the latest `WhosOn.apk` from the [Releases page](https://github.com/ohjann/whoson/releases/latest).
 3. Open the downloaded APK to install.
 4. If prompted by Play Protect, tap **Install anyway** (the app is open-source and safe to inspect).
-
-> **Note:** Replace `OWNER` with the actual GitHub username/organization.
 
 ## Building from Source
 
@@ -47,48 +42,35 @@ WhosOn is distributed as a direct APK download (no Play Store required).
 | Tool | Minimum Version |
 |------|----------------|
 | Node.js | 20 |
-| npm | 10 |
+| pnpm | 10 |
 | Xcode | 16 (iOS builds) |
 | Android Studio | Latest stable (Android builds) |
 | CocoaPods | 1.15+ (iOS builds) |
 
-### Web / PWA
-
-```bash
-# Clone the repository
-git clone https://github.com/OWNER/whoson.git
-cd whoson
-
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-```
-
 ### iOS
 
 ```bash
+# Clone the repository
+git clone https://github.com/ohjann/whoson.git
+cd whoson
+
 # Install dependencies
-npm install
+pnpm install
 
 # Build the web app
-npm run build
+pnpm build
 
 # Add the iOS platform (first time only)
-npx cap add ios
+pnpm cap add ios
 
 # Generate icons and splash screens
-npm run generate:assets
+pnpm generate:assets
 
 # Sync web assets to native
-npx cap sync ios
+pnpm cap sync ios
 
 # Open in Xcode
-npx cap open ios
+pnpm cap open ios
 ```
 
 In Xcode, select your development team under **Signing & Capabilities**, then build and run on your device or simulator.
@@ -97,22 +79,22 @@ In Xcode, select your development team under **Signing & Capabilities**, then bu
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Build the web app
-npm run build
+pnpm build
 
 # Add the Android platform (first time only)
-npx cap add android
+pnpm cap add android
 
 # Generate icons and splash screens
-npm run generate:assets
+pnpm generate:assets
 
 # Sync web assets to native
-npx cap sync android
+pnpm cap sync android
 
 # Open in Android Studio
-npx cap open android
+pnpm cap open android
 ```
 
 In Android Studio, wait for Gradle sync to complete, then build and run.
@@ -126,9 +108,9 @@ Source assets live in `resources/`:
 After adding native platforms, regenerate platform-specific assets:
 
 ```bash
-npm run generate:assets
+pnpm generate:assets
 # or directly:
-npx @capacitor/assets generate
+pnpm @capacitor/assets generate
 ```
 
 This populates `ios/App/App/Assets.xcassets` and `android/app/src/main/res/` with all required sizes.
@@ -162,13 +144,13 @@ scripts/         # Build helper scripts
 
 ```bash
 # Run all tests once
-npm run test:run
+pnpm test:run
 
 # Run tests in watch mode
-npm run test
+pnpm test
 
 # Type check
-npm run check
+pnpm check
 ```
 
 Tests live alongside source files as `*.test.ts`.
@@ -177,7 +159,7 @@ Tests live alongside source files as `*.test.ts`.
 
 ```bash
 # Requires iOS device on same LAN
-npm run dev:cap
+pnpm dev:cap
 ```
 
 This detects your local IP, updates the Capacitor config, syncs to native, and opens Xcode.
@@ -189,7 +171,7 @@ Contributions are welcome. Please open an issue to discuss significant changes b
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feat/my-feature`
 3. Make your changes following the patterns in `CLAUDE.md`
-4. Run `npm run check` and `npm run test:run` — both must pass
+4. Run `pnpm check` and `pnpm test:run` — both must pass
 5. Open a pull request with a clear description
 
 ### Code Conventions
