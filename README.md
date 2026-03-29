@@ -2,6 +2,14 @@
 
 An offline-first festival schedule companion for iOS and Android. Browse artist lineups, highlight your must-sees, detect clashes, and never miss a set.
 
+<p align="center">
+  <img src="docs/screenshots/now-playing.png" width="240" alt="Now playing view" />
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/schedule.png" width="240" alt="Schedule view" />
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/welcome.png" width="240" alt="Welcome screen" />
+</p>
+
 ## Features
 
 - Import schedules from Clashfinder or manual JSON/CSV
@@ -36,6 +44,8 @@ WhosOn is distributed as a direct APK download (no Play Store required).
 4. If prompted by Play Protect, tap **Install anyway** (the app is open-source and safe to inspect).
 
 ## Building from Source
+
+> **Note:** `pnpm dev` runs a local web server for development and debugging. The web browser is not a release target — the app ships as native iOS and Android builds via Capacitor.
 
 ### Prerequisites
 
