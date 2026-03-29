@@ -15,6 +15,7 @@
     act,
     highlight,
     isHidden = false,
+    clashResolved = false,
     clashingWith = [],
     onclose,
     onresolveclashes
@@ -22,6 +23,7 @@
     act: Act;
     highlight: UserHighlight | undefined;
     isHidden?: boolean;
+    clashResolved?: boolean;
     clashingWith?: Act[];
     onclose?: () => void;
     onresolveclashes?: () => void;
@@ -157,20 +159,51 @@
         </a>
       {/if}
 
-      <!-- Clash warnings -->
+      <!-- Clash info -->
       {#if clashingWith.length > 0}
-        <button
-          type="button"
-          class="mb-4 w-full space-y-2 text-left"
-          onclick={() => { onclose?.(); onresolveclashes?.(); }}
-        >
-          {#each clashingWith as other (other.id)}
-            <ClashWarning actA={act} actB={other} />
-          {/each}
-          {#if onresolveclashes}
-            <p class="text-xs font-medium text-primary text-center pt-1">Tap to resolve</p>
-          {/if}
-        </button>
+        {#if clashResolved}
+          <!-- Resolved: show rank and option to edit -->
+          <button
+            type="button"
+            class="mb-4 w-full rounded-lg border border-base-content/10 bg-base-200 p-3 text-left"
+            onclick={() => { onclose?.(); onresolveclashes?.(); }}
+          >
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary">
+                  {(highlight?.clashRank ?? 0) + 1}
+                </span>
+                <div>
+                  <p class="text-sm font-medium">
+                    {#if (highlight?.clashRank ?? 0) === 0}
+                      Your top pick
+                    {:else}
+                      Ranked #{(highlight?.clashRank ?? 0) + 1}
+                    {/if}
+                  </p>
+                  <p class="text-xs text-base-content/50">
+                    Clashes with {clashingWith.map((a) => a.name).join(', ')}
+                  </p>
+                </div>
+              </div>
+              <span class="text-xs font-medium text-primary">Edit</span>
+            </div>
+          </button>
+        {:else}
+          <!-- Unresolved: show warning and prompt to resolve -->
+          <button
+            type="button"
+            class="mb-4 w-full space-y-2 text-left"
+            onclick={() => { onclose?.(); onresolveclashes?.(); }}
+          >
+            {#each clashingWith as other (other.id)}
+              <ClashWarning actA={act} actB={other} />
+            {/each}
+            {#if onresolveclashes}
+              <p class="text-xs font-medium text-primary text-center pt-1">Tap to resolve</p>
+            {/if}
+          </button>
+        {/if}
       {/if}
 
       <!-- Highlight toggle -->

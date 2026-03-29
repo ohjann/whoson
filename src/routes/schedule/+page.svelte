@@ -398,6 +398,7 @@
     act={selectedAct}
     highlight={selectedAct.id != null ? highlightMap.get(selectedAct.id) : undefined}
     isHidden={selectedAct.id != null && hiddenActIds.has(selectedAct.id)}
+    clashResolved={selectedAct.id != null && resolvedClashActIds.has(selectedAct.id)}
     clashingWith={getClashingActsFor(selectedAct)}
     onclose={closeSheet}
     onresolveclashes={() => { showClashResolver = true; }}
