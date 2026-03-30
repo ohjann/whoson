@@ -1,6 +1,6 @@
 # Who's On
 
-[![CI](https://github.com/ohjann/whoson/actions/workflows/ci.yml/badge.svg)](https://github.com/ohjann/whoson/actions/workflows/ci.yml)
+[![CI](https://github.com/ohjann/whoson/actions/workflows/build.yml/badge.svg)](https://github.com/ohjann/whoson/actions/workflows/build.yml)
 
 [GitHub](https://github.com/ohjann/whoson) | [Radicle](https://app.radicle.xyz/nodes/iris.radicle.xyz/rad%3Azcjc2W2eaGyDSYi11s7QL4puqG4N)
 
