@@ -1,5 +1,9 @@
 # Who's On
 
+[![CI](https://github.com/ohjann/whoson/actions/workflows/ci.yml/badge.svg)](https://github.com/ohjann/whoson/actions/workflows/ci.yml)
+
+[GitHub](https://github.com/ohjann/whoson) | [Radicle](https://app.radicle.xyz/nodes/iris.radicle.xyz/rad%3Azcjc2W2eaGyDSYi11s7QL4puqG4N)
+
 An offline-first festival schedule companion for iOS and Android. Browse artist lineups, highlight your must-sees, detect clashes, and never miss a set.
 
 <p align="center">
